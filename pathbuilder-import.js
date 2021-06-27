@@ -47,9 +47,6 @@ function beginPathbuilderImport(targetActor){
   finishedSpells = false;
   allItems=[];
 
-  // <input type="checkbox" id="checkBoxSpellcasters" name="checkBoxSpellcasters" checked>
-  // <label for="checkBoxSpellcasters"> Import Spellcasters? (Deletes existing)</label><br><br>
-  
   new Dialog({
     title: `Pathbuilder Import`,
     content: `
@@ -66,12 +63,15 @@ function beginPathbuilderImport(targetActor){
       <form>
           <input type="checkbox" id="checkBoxFeats" name="checkBoxFeats" checked>
           <label for="checkBoxFeats"> Import Feats and Specials?</label><br><br>
-          <input type="checkbox" id="checkBoxEquipment" name="checkBoxEquipment">
+          <input type="checkbox" id="checkBoxEquipment" name="checkBoxEquipment" checked>
           <label for="checkBoxEquipment"> Import Equipment?</label><br>
-          <input type="checkbox" id="checkBoxMoney" name="checkBoxMoney">
+          <input type="checkbox" id="checkBoxMoney" name="checkBoxMoney" checked>
           <label for="checkBoxMoney"> Import Money?</label><br><br>
-          <input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll">
+          <input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll" checked>
           <label for="checkBoxDeleteAll"> Delete all existing items before import (excluding spells)?</label><br><br>
+          <input type="checkbox" id="checkBoxSpells" name="checkBoxSpells" checked>
+          <label for="checkBoxSpells"> Import Spells? (Deletes existing)</label><br><br>
+
       </form>
       <div id="divCode">
         Enter your pathbuilder user ID number<br>
@@ -145,7 +145,7 @@ function beginPathbuilderImport(targetActor){
   
          addMoney = html.find('[name="checkBoxMoney"]')[0].checked;
   
-        //  addSpellcasters = html.find('[name="checkBoxSpellcasters"]')[0].checked;
+         addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
   
          deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
   
@@ -936,13 +936,13 @@ function getSizeValue(size){
 async function setSpellcasters(targetActor, arraySpellcasters, deleteAll){
 
 
-  // // delete existing spellcasters and spells if not already deleted || i.type === "spell"
-  // if (!deleteAll){
-  //   let items = targetActor.data.items.filter(i => i.type === "spellcastingEntry");
-  //   let deletions = items.map(i => i.id);
-  //   let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); 
+  // delete existing spellcasters and spells if not already deleted || i.type === "spell"
+  if (!deleteAll){
+    let items = targetActor.data.items.filter(i => i.type === "spellcastingEntry");
+    let deletions = items.map(i => i.id);
+    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); 
 
-  // }
+  }
   
    // make array of spellcaster instances. put 
    let requiredSpells=[];
@@ -950,51 +950,49 @@ async function setSpellcasters(targetActor, arraySpellcasters, deleteAll){
         if (arraySpellcasters.hasOwnProperty(ref)) {
           let spellCaster = arraySpellcasters[ref];
           spellCaster.instance = await addSpecificCasterAndSpells(targetActor, spellCaster, spellCaster.magicTradition, spellCaster.spellcastingType);
-          
-          // for (var ref in spellCaster.spells) {
-          //   if (spellCaster.spells.hasOwnProperty(ref)) {
-          //     let spellListObject = spellCaster.spells[ref];
-          //     requiredSpells = requiredSpells.concat(spellListObject.list);
-          //   }
-          // }
+          for (var ref in spellCaster.spells) {
+            if (spellCaster.spells.hasOwnProperty(ref)) {
+              let spellListObject = spellCaster.spells[ref];
+              requiredSpells = requiredSpells.concat(spellListObject.list);
+            }
+          }
         }
     }
 
+    // finishedSpells=true;
+    // checkAllFinishedAndCreate(targetActor);
+  
+   game.packs.filter(pack => pack.metadata.name === 'spells-srd').forEach(async (pack) => {
+    const content = await pack.getDocuments();
+    for (const action of content.filter(item => spellIsRequired(item, requiredSpells))) {
+      arraySpellcasters.forEach(spellCaster => {
+
+        for (var ref in spellCaster.spells) {
+          if (spellCaster.spells.hasOwnProperty(ref)) {
+
+            let spellListObject = spellCaster.spells[ref];
+
+
+            for (var ref in spellListObject.list) {
+                if (spellListObject.list.hasOwnProperty(ref)) {
+                    if (getSlug(spellListObject.list[ref])==action.data.data.slug){
+                        const clonedData = JSON.parse(JSON.stringify(action.data));
+                        clonedData.data.location.value = spellCaster.instance[0].id;
+                        clonedData.data.level.value = spellListObject.spellLevel;
+
+                        allItems.push(clonedData);
+                        break;
+                        
+                    }
+                }         
+             }
+          }         
+        }
+       });
+    }
     finishedSpells=true;
     checkAllFinishedAndCreate(targetActor);
-  
-  //  game.packs.filter(pack => pack.metadata.name === 'spells-srd').forEach(async (pack) => {
-  //   const content = await pack.getDocuments();
-  //   for (const action of content.filter(item => spellIsRequired(item, requiredSpells))) {
-  //     arraySpellcasters.forEach(spellCaster => {
-
-  //       for (var ref in spellCaster.spells) {
-  //         if (spellCaster.spells.hasOwnProperty(ref)) {
-
-  //           let spellListObject = spellCaster.spells[ref];
-
-
-  //           for (var ref in spellListObject.list) {
-  //               if (spellListObject.list.hasOwnProperty(ref)) {
-  //                   if (getSlug(spellListObject.list[ref])==action.data.data.slug){
-
-  //                       const clonedData = JSON.parse(JSON.stringify(action.data));
-  //                       clonedData.data.location.value = spellCaster.instance.id;
-  //                       clonedData.data.level.value = spellListObject.spellLevel;
-
-  //                       allItems.push(clonedData);
-
-                        
-  //                   }
-  //               }         
-  //            }
-  //         }         
-  //       }
-  //      });
-  //   }
-  //   finishedSpells=true;
-  //   checkAllFinishedAndCreate(targetActor);
-  // });
+  });
 
 }
 
