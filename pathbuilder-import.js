@@ -1,8 +1,11 @@
+const fbpiDebug=false;
+const fpbi="0.2.3";
 Hooks.on('renderActorSheet', function(obj, html){
 
   // Only inject the link if the actor is of type "character" and the user has permission to update it
   const actor = obj.actor;
-  // if (!(actor.data.type === "character" && actor.can(game.user, "update"))) return;
+  if (!(actor.data.type === "character")){ return;}
+  if (actor.canUserModify(game.user, "update")==false){ return;}
 
   let element = html.find(".window-header .window-title");
   if (element.length != 1) return;
@@ -170,7 +173,8 @@ function fetchPathbuilderBuild(targetActor, buildID){
     xmlhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         let responseJSON = JSON.parse(this.responseText);
-        console.log(responseJSON);
+        if (fbpiDebug)
+          console.log(responseJSON);
 
         if (responseJSON.success){
           jsonBuild = responseJSON.build;
@@ -1109,7 +1113,8 @@ async function addSpecificCasterAndSpells(targetActor, spellCaster, magicTraditi
 
 
   let spellCasterInstance = await targetActor.createEmbeddedDocuments('Item', fake);
-  console.log(spellCasterInstance);
+  if (fbpiDebug)
+    console.log(spellCasterInstance);
   return spellCasterInstance;
 }
 
@@ -1195,7 +1200,8 @@ function checkAllFinishedAndCreate(targetActor){
             if (!item.added){
               notAddedCount++;
               warning+="<li>Equipment: "+item[0]+"</li>";
-              //console.log("did not add "+item[0]);
+              if (fbpiDebug)
+                console.log("did not add "+item[0]);
             }
           }
         }
@@ -1207,7 +1213,8 @@ function checkAllFinishedAndCreate(targetActor){
             if (!addedItems.includes(item[0])){
               notAddedCount++;
               warning+="<li>Feat: "+item[0]+"</li>";
-              //console.log("did not add "+item[0]);
+              if (fbpiDebug)
+                console.log("did not add "+item[0]);
             }
           }
         }
@@ -1218,7 +1225,8 @@ function checkAllFinishedAndCreate(targetActor){
             if (!addedItems.includes(item)){
               notAddedCount++;
               warning+="<li>Special: "+item+"</li>";
-              //console.log("did not add "+item);
+              if (fbpiDebug)
+                console.log("did not add "+item);
             }
           }
         }
