@@ -30,16 +30,14 @@ var addEquipment=false;
 var addMoney=false;
 var addSpellcasters=false;
 var deleteAll=false;
+var heroVaultExport=false;
 
 var allItems=[];
 var jsonBuild=[];
 var addedItems=[];
 
 
-
-
-
-function beginPathbuilderImport(targetActor){
+function beginPathbuilderImport(targetActor,isHV=false){
 
   applyChanges = false;
   finishedFeats = false;
@@ -49,11 +47,12 @@ function beginPathbuilderImport(targetActor){
   finishedEquipment=false;
   finishedSpells = false;
   allItems=[];
-
+  let heroVault='';
+  if (isHV)
+     heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" ><label for="checkBoxHVExport"> Export this PC to my HeroVau.lt</label><br><br>';
   new Dialog({
     title: `Pathbuilder Import`,
-    content: `
-      
+    content: `      
       <div>
         <p>Step 1: Refresh this browser page!</p>
         <p>Step 2: Export your character from Pathbuilder 2e via the app menu</p>
@@ -73,8 +72,8 @@ function beginPathbuilderImport(targetActor){
           <input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll" checked>
           <label for="checkBoxDeleteAll"> Delete all existing items before import (excluding spells)?</label><br><br>
           <input type="checkbox" id="checkBoxSpells" name="checkBoxSpells" checked>
-          <label for="checkBoxSpells"> Import Spells? (Deletes existing)</label><br><br>
-
+          <label for="checkBoxSpells"> Import Spells? (Deletes existing)</label><br><br> 
+          ${heroVault}
       </form>
       <div id="divCode">
         Enter your pathbuilder user ID number<br>
@@ -151,7 +150,8 @@ function beginPathbuilderImport(targetActor){
          addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
   
          deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
-  
+         if (isHV)
+          heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked;
          fetchPathbuilderBuild(targetActor, buildID);
   
       }
@@ -670,7 +670,9 @@ for (var ref in arraySpecials){
 
   addLores(targetActor, arrayLores);
  
-
+  if (heroVaultExport) {
+    heroJSON = JSON.stringify(targetActor.data);
+  }
 }
 
 // function getExistingClassSlug(targetActor){
