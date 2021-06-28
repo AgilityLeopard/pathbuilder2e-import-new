@@ -1,5 +1,5 @@
 const fbpiDebug=false;
-const fpbi="0.2.3";
+const fpbi="0.2.4";
 Hooks.on('renderActorSheet', function(obj, html){
 
   // Only inject the link if the actor is of type "character" and the user has permission to update it
