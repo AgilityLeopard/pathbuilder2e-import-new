@@ -11,8 +11,12 @@ Please be aware that this module attempts to match Pathbuilder 2e feats, special
 4) In *Foundry VTT* click Import from Pathbuilder 2e, found right at the top of your character sheet next to the close button.
 5) Enter the 6 digit reference number you got from Pathbuilder and click import.
 
-![Image of Character Sheet](https://github.com/Doctor-Unspeakable/foundry-pathbuilder2e-import/blob/master/button_location.jpg?raw=true)
+![Image of Character Sheet](https://github.com/zarmstrong/foundry-pathbuilder2e-import/blob/master/button_location.jpg?raw=true)
 
 6) You then get a few options for the import, which you can use to add items to an existing character or start afresh.
 
-![Image of Import Dialog](https://github.com/Doctor-Unspeakable/foundry-pathbuilder2e-import/blob/master/dialog.jpg?raw=true)
+![Image of Import Dialog](https://github.com/zarmstrong/foundry-pathbuilder2e-import/blob/master/dialog.jpg?raw=true)
+
+
+### Credits
+This module was originally created by [Docter-Unspeakable](https://github.com/Doctor-Unspeakable)
