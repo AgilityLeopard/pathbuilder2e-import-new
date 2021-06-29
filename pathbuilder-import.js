@@ -1,5 +1,5 @@
 const fbpiDebug=true;
-const fpbi="0.2.3";
+const fpbi="0.3.0";
 
 var applyChanges = false;
 var finishedFeats = false;
@@ -252,6 +252,7 @@ async function importCharacter(targetActor, jsonBuild){
   if (deleteAll){
     const items = targetActor.data.items.filter(i => shouldBeManuallyDeleted(i));
     const deletions = items.map(i => i.id);
+    // console.log(deletions)
     const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
 
     // let deletions = targetActor.data.items.map(i => i.id);
@@ -278,7 +279,14 @@ async function importCharacter(targetActor, jsonBuild){
   for (var ref in arrayEquipment) {
     arrayEquipment[ref][0] = mapItemToFoundryName(arrayEquipment[ref][0]);
   }
+  for (var ref in arraySpecials) {
+    arraySpecials[ref] = mapSpecialToFoundryName(arraySpecials[ref]);
+  }
+  for (var ref in arrayFeats) {
+    arrayFeats[ref][0] = mapSpecialToFoundryName(arrayFeats[ref][0]);
+  }
 
+  
   // senses
   var senses = [];
   for (var ref in arraySpecials){
@@ -423,13 +431,13 @@ async function importCharacter(targetActor, jsonBuild){
     }
   }
   
+  
   //clean up some specials that are handled by Foundry:
-  const blacklist=["Great Fortitude", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema","Druidic Language","Darkvision"];
-  // console.log("before/after");
-  // console.log(arraySpecials);
+  const blacklist=[jsonBuild.heritage,"Great Fortitude", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema","Druidic Language","Darkvision","Stealth", "Survival", "Arcana", "Will", "Fortitude", "Signature Spells","Low-Light Vision","Powerful Fist", "Mystic Strikes","Incredible Movement","Claws","Wild Empathy","Aquatic Adaptation","Resolve","Expert Spellcaster","Master Spellcaster", "Legendary Spellcaster"];
   arraySpecials = arraySpecials.filter(val => !blacklist.includes(val));
   jsonBuild.specials=arraySpecials;
-  console.log(arraySpecials);
+  // console.log(arraySpecials);
+
   if (addFeats){
 
     finishedAncestryFeatures=true;
@@ -445,6 +453,8 @@ async function importCharacter(targetActor, jsonBuild){
     // console.log("doing action items")
     addActionItems(targetActor, arraySpecials);
     addAncestryFeatureItems(targetActor, arraySpecials);
+    
+    // most class features should be handled by Foundry
     addClassFeatureItems(targetActor, arraySpecials);
     
   }else {
@@ -850,7 +860,7 @@ async function addAncestryFeatureFeatItems(targetActor, arraySpecials){
     for (var ref in arraySpecials) {
       if (arraySpecials.hasOwnProperty(ref)) {
         var itemName= arraySpecials[ref];
-        console.log(`is ${itemName} = ${action.data.data.slug}?`);
+        // console.log(`is ${itemName} = ${action.data.data.slug}?`);
         if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofItem(targetActor, itemName)){
           addedItems.push(itemName);
           allItems.push(action.data);
@@ -1300,8 +1310,18 @@ function getSlugNoQuote(itemName){
 }
 
 function mapItemToFoundryName(itemName) {
-  console.log("Checking map for '"+itemName+"'")
+  if (fbpiDebug)
+    console.log("Checking map for '"+itemName+"'")
   const changeNames=[{'name':'Chain','newname':'Chain (10 feet)'}]
+  const newNameIdx = changeNames.findIndex(function(item) {return item.name==itemName});
+  // if (newNameIdx>-1) console.log(changeNames[newNameIdx]['newname']);
+  return (newNameIdx >-1) ? changeNames[newNameIdx]['newname'] : itemName;
+}
+
+function mapSpecialToFoundryName(itemName) {
+  if (fbpiDebug)
+    console.log("Checking map for '"+itemName+"'")
+  const changeNames=[{'name':'Maestro','newname':'Maestro Muse'},{"name": "Duelist Dedication (LO)", "newname": "Aldori Duelist Dedication"}, {"name": "Parry", "newname": "Aldori Parry"}, {"name": "Riposte", "newname": "Aldori Riposte"}, {"name": "Sentry Dedication", "newname": "Lastwall Sentry Dedication"}, {"name": "Wary Eye", "newname": "Eye of Ozem"}, {"name": "Warden", "newname": "Lastwall Warden"}, {"name": "Heavenseeker Dedication", "newname": "Jalmeri Heavenseeker Dedication"}, {"name": "Mantis God's Grip", "newname": "Achaekek's Grip"}, {"name": "High Killer Training", "newname": "Vernai Training"}, {"name": "Guild Agent Dedication", "newname": "Pathfinder Agent Dedication"}, {"name": "Wayfinder Resonance Infiltrator", "newname": "Westyr's Wayfinder Repository"}, {"name": "Collegiate Attendant Dedication", "newname": "Magaambyan Attendant Dedication"}, {"name": "Scholarly Storytelling", "newname": "Uzunjati Storytelling"}, {"name": "Scholarly Recollection", "newname": "Uzunjati Recollection"}, {"name": "Secret Lesson", "newname": "Janatimo's Lessons"}, {"name": "Lumberjack Dedication", "newname": "Turpin Rowe Lumberjack Dedication"}, {"name": "Fourberie", "newname": "Fane's Fourberie"}, {"name": "Escape", "newname": "Fane's Escape"}, {"name": "Stab and Snag", "newname": "Stella's Stab and Snag"}, {"name":"Cognitive Crossover", "newname":"Kreighton's Cognitive Crossover"}]
   const newNameIdx = changeNames.findIndex(function(item) {return item.name==itemName});
   // if (newNameIdx>-1) console.log(changeNames[newNameIdx]['newname']);
   return (newNameIdx >-1) ? changeNames[newNameIdx]['newname'] : itemName;
