@@ -1,21 +1,5 @@
-const fbpiDebug=false;
-const fpbi="0.2.4";
-Hooks.on('renderActorSheet', function(obj, html){
-
-  // Only inject the link if the actor is of type "character" and the user has permission to update it
-  const actor = obj.actor;
-  if (!(actor.data.type === "character")){ return;}
-  if (actor.canUserModify(game.user, "update")==false){ return;}
-
-  let element = html.find(".window-header .window-title");
-  if (element.length != 1) return;
-
-  let button = $(`<a class="popout" style><i class="fas fa-book"></i>Import from Pathbuilder 2e</a>`);
-  button.on('click', () => beginPathbuilderImport(obj.object));
-  element.after(button);
-  }
-   
-);
+const fbpiDebug=true;
+const fpbi="0.3.1";
 
 var applyChanges = false;
 var finishedFeats = false;
@@ -30,17 +14,50 @@ var addEquipment=false;
 var addMoney=false;
 var addSpellcasters=false;
 var deleteAll=false;
+var heroVaultExport=false;
 
 var allItems=[];
 var jsonBuild=[];
 var addedItems=[];
+let isHV=false;
 
+async function doHV() {
+  if (game.modules.get('herovaultfoundry')?.active){
+    let {supportCheck} = await import('../herovaultfoundry/herovault-min.js');
+    if (typeof supportCheck !== "undefined")
+      isHV=supportCheck();
+    if (fbpiDebug)
+      console.log("is hv?: "+isHV);
+  }
+}
 
+async function doHVExport(hero,act) {
+  if (game.modules.get('herovaultfoundry')?.active){
+    let {exportToHVFromPBHLO} = await import('../herovaultfoundry/herovault-min.js');
+    if (typeof exportToHVFromPBHLO !== "undefined") {
+      exportToHVFromPBHLO(hero,act);
+    }
+  }
+  return
+}
 
+Hooks.on('renderActorSheet', async function(obj, html){
+  await doHV();
+  // Only inject the link if the actor is of type "character" and the user has permission to update it
+  const actor = obj.actor;
+  if (!(actor.data.type === "character")){ return;}
+  if (actor.canUserModify(game.user, "update")==false){ return;}
 
+  let element = html.find(".window-header .window-title");
+  if (element.length != 1) return;
+  if (isHV==false) {
+    let button = $(`<a class="popout" style><i class="fas fa-book"></i>Import from Pathbuilder 2e</a>`);
+    button.on('click', () => beginPathbuilderImport(obj.object));
+    element.after(button);
+  }
+});
 
-function beginPathbuilderImport(targetActor){
-
+export async function beginPathbuilderImport(targetActor,isHV=false){
   applyChanges = false;
   finishedFeats = false;
   finishedActions = false;
@@ -49,18 +66,21 @@ function beginPathbuilderImport(targetActor){
   finishedEquipment=false;
   finishedSpells = false;
   allItems=[];
-
+  let heroVault='';
+  if (isHV)
+    heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" ><label for="checkBoxHVExport"> Export this PC to my HeroVau.lt</label><br><br>';
   new Dialog({
     title: `Pathbuilder Import`,
     content: `
-      
       <div>
+        <p><strong>It is strongly advised to import to a blank PC and not overwrite an existing PC.</strong></p>
+        <hr>
         <p>Step 1: Refresh this browser page!</p>
         <p>Step 2: Export your character from Pathbuilder 2e via the app menu</p>
         <p>Step 3: Enter the 6 digit user ID number from the pathbuilder export dialog below</p>
         <br>
         <p>Please note - items which cannot be matched to the Foundry database will not be imported!<p>
-        <p>Spells are not currently being imported.</p>
+
       <div>
       <hr/>
       <form>
@@ -74,7 +94,7 @@ function beginPathbuilderImport(targetActor){
           <label for="checkBoxDeleteAll"> Delete all existing items before import (excluding spells)?</label><br><br>
           <input type="checkbox" id="checkBoxSpells" name="checkBoxSpells" checked>
           <label for="checkBoxSpells"> Import Spells? (Deletes existing)</label><br><br>
-
+          ${heroVault}
       </form>
       <div id="divCode">
         Enter your pathbuilder user ID number<br>
@@ -86,7 +106,7 @@ function beginPathbuilderImport(targetActor){
       </div>
       <br><br>
       <style>
-      
+
         #textBoxBuildID {
             border: 0px;
             padding-left: 15px;
@@ -99,27 +119,27 @@ function beginPathbuilderImport(targetActor){
             width: 330px;
             min-width: 330px;
           }
-          
+
           #divInner{
             left: 0;
             position: sticky;
           }
-          
+
           #divOuter{
-            width: 285px; 
+            width: 285px;
             overflow: hidden;
           }
-  
-          #divCode{  
+
+          #divCode{
             border: 1px solid black;
             width: 300px;
             margin: 0 auto;
             padding: 5px;
           }
-          #checkBoxMoney{  
+          #checkBoxMoney{
             margin-left: 35px;
           }
-  
+
       </style>
       `,
     buttons: {
@@ -136,46 +156,38 @@ function beginPathbuilderImport(targetActor){
     default: "yes",
     close: html => {
       if (applyChanges) {
-         
-         let buildID= html.find('[id="textBoxBuildID"]')[0].value;
-         if (!isNormalInteger(buildID)){
-             ui.notifications.warn("Build ID must be a positive integer!");
-             return;
-         }
-         addFeats = html.find('[name="checkBoxFeats"]')[0].checked;
-  
-         addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked;
-  
-         addMoney = html.find('[name="checkBoxMoney"]')[0].checked;
-  
-         addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
-  
-         deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
-  
-         fetchPathbuilderBuild(targetActor, buildID);
-  
+        let buildID= html.find('[id="textBoxBuildID"]')[0].value;
+        if (!isNormalInteger(buildID)){
+          ui.notifications.warn("Build ID must be a positive integer!");
+          return;
+        }
+        addFeats = html.find('[name="checkBoxFeats"]')[0].checked;
+        addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked;
+        addMoney = html.find('[name="checkBoxMoney"]')[0].checked;
+        addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
+        deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
+        if (isHV)
+          heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked;
+        if (fbpiDebug)
+          console.log("Got heroVaultExport:" + heroVaultExport);
+        fetchPathbuilderBuild(targetActor, buildID);
       }
     }
   }).render(true);
-
 }
 
-
-
 function isNormalInteger(str) {
-    var n = Math.floor(Number(str));
-    return n !== Infinity && String(n) === str && n >= 0;
+  var n = Math.floor(Number(str));
+  return n !== Infinity && String(n) === str && n >= 0;
 }
 
 function fetchPathbuilderBuild(targetActor, buildID){
-
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         let responseJSON = JSON.parse(this.responseText);
         if (fbpiDebug)
           console.log(responseJSON);
-
         if (responseJSON.success){
           jsonBuild = responseJSON.build;
           checkCharacterIsCorrect(targetActor, responseJSON.build);
@@ -183,16 +195,14 @@ function fetchPathbuilderBuild(targetActor, buildID){
           ui.notifications.warn("Unable to find a character with this build id!");
           return;
         }
-        
+
       }
     };
     xmlhttp.open("GET", "https://www.pathbuilder2e.com/json.php?id="+buildID, true);
     xmlhttp.send();
-
 }
 
 function checkCharacterIsCorrect(targetActor,jsonBuild){
-
   let correctCharacter = false;
   new Dialog({
     title: jsonBuild.name,
@@ -213,20 +223,17 @@ function checkCharacterIsCorrect(targetActor,jsonBuild){
     default: "yes",
     close: html => {
       if (correctCharacter) {
+        ui.notifications.info("Please be patient while "+jsonBuild.name+" is imported.");
         importCharacter(targetActor, jsonBuild);
       }
     }
   }).render(true);
-
-  
 }
-
-
 
 function shouldBeManuallyDeleted(i){
   // if (i.data.type=="ancestry"){
   //   return false;
-  // }  
+  // }
   if (i.data.type=="feat"){
     if (i.data.data.featType.value=="ancestryfeature"){
       return false;
@@ -241,27 +248,20 @@ function shouldBeManuallyDeleted(i){
   return true;
 }
 
-
 async function importCharacter(targetActor, jsonBuild){
-
-  
   if (deleteAll){
-
     const items = targetActor.data.items.filter(i => shouldBeManuallyDeleted(i));
     const deletions = items.map(i => i.id);
+    // console.log(deletions)
     const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
 
     // let deletions = targetActor.data.items.map(i => i.id);
     // let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
-
-
   } else if (addMoney){
     let items = targetActor.data.items.filter(i => i.name === "Platinum Pieces" || i.name === "Gold Pieces" || i.name === "Silver Pieces" || i.name === "Copper Pieces");
     let deletions = items.map(i => i.id);
-    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); 
-
+    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
   }
-
 
   let arrayFeats = jsonBuild.feats;
   let arrayEquipment = jsonBuild.equipment;
@@ -270,43 +270,64 @@ async function importCharacter(targetActor, jsonBuild){
   let arraySpecials = jsonBuild.specials;
   let arrayLores = jsonBuild.lores;
 
-    // lower case languages fix
-for (var ref in jsonBuild.languages) {
+  // lower case languages fix
+  for (var ref in jsonBuild.languages) {
     if (jsonBuild.languages.hasOwnProperty(ref)) {
       jsonBuild.languages[ref]=jsonBuild.languages[ref].toLowerCase();
     }
-}
-// senses
-var senses = [];
-for (var ref in arraySpecials){
+  }
+  for (var ref in arrayEquipment) {
+    arrayEquipment[ref][0] = mapItemToFoundryName(arrayEquipment[ref][0]);
+  }
+  for (var ref in arraySpecials) {
+    arraySpecials[ref] = mapSpecialToFoundryName(arraySpecials[ref]);
+  }
+  for (var ref in arrayFeats) {
+    arrayFeats[ref][0] = mapSpecialToFoundryName(arrayFeats[ref][0]);
+  }
+
+
+  // senses
+  var senses = [];
+  for (var ref in arraySpecials){
     if (arraySpecials.hasOwnProperty(ref)){
-        if (arraySpecials[ref]=="Low-Light Vision"){
-            senses[0]={
-              exceptions: '',
-              label: 'Low-Light Vision',
-              type: "lowLightVision",
-              value: ''
-          }
-        } else if (arraySpecials[ref]=="Darkvision"){
-          senses[1]={
-            exceptions: '',
-            label: 'Darkvision',
-            type: "darkvision",
-            value: ''
+      if (arraySpecials[ref]=="Low-Light Vision"){
+        senses[0]={
+          exceptions: '',
+          label: 'Low-Light Vision',
+          type: "lowLightVision",
+          value: ''
         }
+      } else if (arraySpecials[ref]=="Darkvision") {
+        senses[1]={
+          exceptions: '',
+          label: 'Darkvision',
+          type: "darkvision",
+          value: ''
+        }
+      /*} else if (arraySpecials[ref]=="Scent") {
+        senses[1]={
+          exceptions: '',
+          label: 'Scent',
+          type: "scent",
+          value: ''
+        } */
       }
     }
-}
-
-
+  }
 
     // 'data.details.class.value': jsonBuild.class,
     // 'data.details.ancestry.value': jsonBuild.ancestry,
-
+  let conEven = (jsonBuild.abilities.con % 2 ==0 ? jsonBuild.abilities.con : jsonBuild.abilities.con-1)-10;
+  let conBonus=0;
+  if (conEven >0)
+    conBonus=conEven/2
+  else
+    conBonus=((conEven*-1)/2)*-1
+  const currentHP=jsonBuild.attributes.bonushp+(jsonBuild.attributes.classhp*jsonBuild.level)+jsonBuild.attributes.ancestryhp+(conBonus*jsonBuild.level);
   targetActor.update({
-    'name': jsonBuild.name, 
-    'data.details.level.value': jsonBuild.level, 
-    'data.details.background.value': jsonBuild.background, 
+    'name': jsonBuild.name,
+    'data.details.level.value': jsonBuild.level,
     'data.details.heritage.value': jsonBuild.heritage,
     'data.details.age.value': jsonBuild.age,
     'data.details.gender.value': jsonBuild.gender,
@@ -329,6 +350,7 @@ for (var ref in arraySpecials){
     'data.attributes.classhp': jsonBuild.attributes.classhp,
     'data.attributes.speed.value': jsonBuild.attributes.speed,
     'data.attributes.flatbonushp': jsonBuild.attributes.bonushp,
+    'data.attributes.hp.value': currentHP,
 
     'data.saves.fortitude.rank': jsonBuild.proficiencies.fortitude/2,
     'data.saves.reflex.rank': jsonBuild.proficiencies.reflex/2,
@@ -343,7 +365,7 @@ for (var ref in arraySpecials){
     'data.martial.simple.rank': jsonBuild.proficiencies.simple/2,
     'data.martial.unarmed.rank': jsonBuild.proficiencies.unarmed/2,
 
-    
+
     'data.skills.acr.rank' : jsonBuild.proficiencies.acrobatics/2,
     'data.skills.arc.rank' : jsonBuild.proficiencies.arcana/2,
     'data.skills.ath.rank' : jsonBuild.proficiencies.athletics/2,
@@ -363,65 +385,77 @@ for (var ref in arraySpecials){
 
     'data.attributes.perception.rank': jsonBuild.proficiencies.perception/2,
     'data.attributes.classDC.rank': jsonBuild.proficiencies.classDC/2
-
   });
 
-
-
-
-
-  
+  if (targetActor.data.data.details.background==null ||targetActor.data.data.details.background.value !=jsonBuild.background) {
+    if (deleteAll){
+      const items = targetActor.data.items.filter(i => i.type === "background");
+      const deletions = items.map(i => i.id);
+      const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
+    }
+    let packBackground = await game.packs.get('pf2e.backgrounds').getDocuments();
+    for (const item of packBackground) {
+        if (item.data.data.slug == getSlug(jsonBuild.background)){
+          allItems.push(item.data);
+        }
+    }
+  }
 
   // // //ancestry
   if (targetActor.data.data.details.ancestry!=jsonBuild.ancestry){
-    if (!deleteAll){
+    if (deleteAll){
       const items = targetActor.data.items.filter(i => i.type === "ancestry");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
     }
     let packAncestry = await game.packs.get('pf2e.ancestries').getDocuments();
     for (const item of packAncestry) {
-        if (item.data.data.slug == getSlug(jsonBuild.ancestry)){
-          allItems.push(item.data);
-        }
+      if (item.data.data.slug == getSlug(jsonBuild.ancestry)){
+        allItems.push(item.data);
+      }
     }
   }
-  
-  
 
   // //class
   if (targetActor.data.data.details.class!=jsonBuild.class){
-    if (!deleteAll){
+    if (deleteAll){
       const items = targetActor.data.items.filter(i => i.type === "class");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
     }
     let packClasses = await game.packs.get('pf2e.classes').getDocuments();
     for (const item of packClasses) {
-        if (item.data.data.slug == getSlug(jsonBuild.class)){
-          allItems.push(item.data);
-        }
+      if (item.data.data.slug == getSlug(jsonBuild.class)){
+        allItems.push(item.data);
+      }
     }
   }
-  
 
 
-
+  //clean up some specials that are handled by Foundry:
+  const blacklist=[jsonBuild.heritage,"Great Fortitude", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema","Druidic Language","Darkvision","Stealth", "Survival", "Arcana", "Will", "Fortitude", "Signature Spells","Low-Light Vision","Powerful Fist", "Mystic Strikes","Incredible Movement","Claws","Wild Empathy","Aquatic Adaptation","Resolve","Expert Spellcaster","Master Spellcaster", "Legendary Spellcaster"];
+  arraySpecials = arraySpecials.filter(val => !blacklist.includes(val));
+  jsonBuild.specials=arraySpecials;
+  // console.log(arraySpecials);
 
   if (addFeats){
 
     finishedAncestryFeatures=true;
     finishedClassFeatures=true;
-
+    // console.log("doing feat items")
     addFeatItems(targetActor, arrayFeats);
-
+    // console.log("doing feat items on specials")
+    addFeatItems(targetActor, arraySpecials);
+    // console.log("doing AncestryFeaturefeat items on feats")
+    // addAncestryFeatureFeatItems(targetActor, arrayFeats);
+    // console.log("doing AncestryFeaturefeat items on specials")
+    // addAncestryFeatureFeatItems(targetActor, arraySpecials);
+    // console.log("doing action items")
     addActionItems(targetActor, arraySpecials);
+    addAncestryFeatureItems(targetActor, arraySpecials);
 
-    // addAncestryFeatureItems(targetActor, arraySpecials);
-    
-    // addClassFeatureItems(targetActor, arraySpecials);
-    
-
+    // most class features should be handled by Foundry
+    addClassFeatureItems(targetActor, arraySpecials);
 
   }else {
     finishedFeats=true;
@@ -430,7 +464,6 @@ for (var ref in arraySpecials){
     finishedClassFeatures=true;
     checkAllFinishedAndCreate(targetActor);
   }
-
 
   if (addEquipment){
 
@@ -450,8 +483,6 @@ for (var ref in arraySpecials){
         arrayKit.push(["rations", 14]);
         arrayKit.push(["torch", 5]);
         arrayKit.push(["waterskin", 1]);
-
-
     }
 
     // CURRENTLY DISABLED AS THE PATHFINDER MODULE NOW AUTOMATICALLY ADDS SPECIFIC WEAPON PROFICIENCIES
@@ -499,21 +530,18 @@ for (var ref in arraySpecials){
       for (var ref in arrayEquipment) {
           if (arrayEquipment.hasOwnProperty(ref)) {
             var itemName= arrayEquipment[ref][0];
-           
-            if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofItem(targetActor, itemName)){
+            // console.log(itemName)
+            if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofItem(targetActor, arrayEquipment[ref][0])){
               var itemAmount= arrayEquipment[ref][1];
               arrayEquipment[ref].added=true;
               const clonedData = JSON.parse(JSON.stringify(action.data));
               if (clonedData.type!="kit"){
                 clonedData.data.quantity.value = itemAmount;
                 allItems.push(clonedData);
-              }           
+              }
             }
         }
       }
-
-
-      
 
       for (var ref in arrayKit) {
         if (arrayKit.hasOwnProperty(ref)) {
@@ -523,7 +551,7 @@ for (var ref in arraySpecials){
             const clonedData = JSON.parse(JSON.stringify(action.data));
             clonedData.data.quantity.value = itemAmount;
             clonedData.data.containerId.value = backpackInstance.id;
-            allItems.push(clonedData);          
+            allItems.push(clonedData);
           }
       }
     }
@@ -532,10 +560,10 @@ for (var ref in arraySpecials){
         if (arrayWeapons.hasOwnProperty(ref)) {
 
           var weaponDetails = arrayWeapons[ref];
+          // console.log(weaponDetails.name);
           if (isNameMatch(weaponDetails.name, action.data.data.slug) && needsNewInstanceofItem(targetActor, weaponDetails.name)){
             weaponDetails.added=true;
             const clonedData = JSON.parse(JSON.stringify(action.data));
-
             clonedData.data.quantity.value = weaponDetails.qty;
 
             // if (specificTrained.includes(weaponDetails.name)){
@@ -549,44 +577,39 @@ for (var ref in arraySpecials){
             // } else {
             //   clonedData.data.weaponType.value = weaponDetails.prof;
             // }
-            
-            clonedData.data.damage.die = weaponDetails.die;
-            clonedData.data.potencyRune.value = weaponDetails.pot.toString();
-            clonedData.data.strikingRune.value = weaponDetails.str;
 
+            clonedData.data.damage.die = weaponDetails.die;
+            clonedData.data.potencyRune.value = weaponDetails.pot;
+            clonedData.data.strikingRune.value = weaponDetails.str;
             if (weaponDetails.runes[0]){
               clonedData.data.propertyRune1.value=camelCase(weaponDetails.runes[0]);
             }
             if (weaponDetails.runes[1]){
-              clonedData.data.propertyRune2.value==camelCase(weaponDetails.runes[1]);
+              clonedData.data.propertyRune2.value=camelCase(weaponDetails.runes[1]);
             }
             if (weaponDetails.runes[2]){
-              clonedData.data.propertyRune3.value==camelCase(weaponDetails.runes[2]);
+              clonedData.data.propertyRune3.value=camelCase(weaponDetails.runes[2]);
             }
             if (weaponDetails.runes[3]){
               clonedData.data.propertyRune4.value=camelCase(weaponDetails.runes[3]);
             }
-
             if (weaponDetails.mat){
               let material = weaponDetails.mat.split(" (")[0];
               clonedData.data.preciousMaterial.value = camelCase(material);
               clonedData.data.preciousMaterialGrade.value = getMaterialGrade(weaponDetails.mat);
             }
             if (weaponDetails.display){
+              // console.log("display name: "+weaponDetails.display)
               clonedData.name = weaponDetails.display;
             }
             allItems.push(clonedData);
-
-
           }
         }
       }
 
       for (var ref in arrayArmor) {
         if (arrayArmor.hasOwnProperty(ref)) {
-
           var armorDetails = arrayArmor[ref];
-          
           if (isNameMatch(armorDetails.name, action.data.data.slug) && needsNewInstanceofItem(targetActor, armorDetails.name)){
             armorDetails.added=true;
             const clonedData = JSON.parse(JSON.stringify(action.data));
@@ -602,7 +625,6 @@ for (var ref in arraySpecials){
               } else {
                 clonedData.data.equipped.value = false;
               }
-  
               if (armorDetails.runes[0]){
                 clonedData.data.propertyRune1.value=camelCase(armorDetails.runes[0]);
               }
@@ -615,25 +637,23 @@ for (var ref in arraySpecials){
               if (armorDetails.runes[3]){
                 clonedData.data.propertyRune4.value=camelCase(armorDetails.runes[3]);
               }
-  
+
               if (armorDetails.mat){
                 let material = armorDetails.mat.split(" (")[0];
                 clonedData.data.preciousMaterial.value = camelCase(material);
                 clonedData.data.preciousMaterialGrade.value = getMaterialGrade(armorDetails.mat);
               }
-  
+
               if (armorDetails.display){
                 clonedData.name = armorDetails.display;
               }
             }
-            
 
             allItems.push(clonedData);
 
           }
         }
       }
-
       if (addMoney){
         if (action.data.data.slug==='platinum-pieces'){
           const clonedData = JSON.parse(JSON.stringify(action.data));
@@ -651,7 +671,7 @@ for (var ref in arraySpecials){
           const clonedData = JSON.parse(JSON.stringify(action.data));
           clonedData.data.quantity.value = jsonBuild.money.cp;
           allItems.push(clonedData);
-        } 
+        }
       }
     }
     finishedEquipment=true;
@@ -660,46 +680,40 @@ for (var ref in arraySpecials){
     finishedEquipment=true;
     checkAllFinishedAndCreate(targetActor);
   }
-
   if (addSpellcasters){
     setSpellcasters(targetActor, jsonBuild.spellCasters, deleteAll);
   } else {
     finishedSpells=true;
     checkAllFinishedAndCreate(targetActor);
   }
-
   addLores(targetActor, arrayLores);
- 
-
 }
 
 // function getExistingClassSlug(targetActor){
-
 //   for (const item of targetActor.data.items) {
 //     console.log(item.data.type);
 //     if (item.data.type =="class"){
 //       return item.data.slug;
 //     }
 //   }
-
 //   // for (var ref in targetActor.data.items) {
 //   //   if (targetActor.data.items.hasOwnProperty(ref)) {
-//   //     let item =targetActor.data.items[ref]; 
+//   //     let item =targetActor.data.items[ref];
 //   //     if (item.type =="class"){
 //   //       return item.data.slug;
 //   //     }
-//   //   }         
+//   //   }
 //   // }
 //   return null;
 // }
 function getExistingAncestrySlug(targetActor){
   for (var ref in targetActor.data.items) {
     if (targetActor.data.items.hasOwnProperty(ref)) {
-      let item =targetActor.data.items[ref]; 
+      let item =targetActor.data.items[ref];
       if (item.type =="ancestry"){
         return item.data.slug;
       }
-    }         
+    }
   }
   return null;
 }
@@ -708,15 +722,14 @@ function notBracersOfArmor(name){
   return !name.toLowerCase().includes("bracers of armor");
 }
 
-function camelCase(str) { 
-  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function(word, index) 
-  { 
-      return index == 0 ? word.toLowerCase() : word.toUpperCase(); 
-  }).replace(/\s+/g, ''); 
-} 
+function camelCase(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function(word, index)
+  {
+      return index == 0 ? word.toLowerCase() : word.toUpperCase();
+  }).replace(/\s+/g, '');
+}
 
 function getMaterialGrade(material){
-
   if (material.toLowerCase().includes("high-grade")){
     return "high";
   } else if (material.toLowerCase().includes("standard-grade")){
@@ -730,39 +743,67 @@ async function addFeatItems(targetActor, arrayFeats){
   let content = await game.packs.get('pf2e.feats-srd').getDocuments();
   for (const action of content.filter(item => featIsRequired(item, arrayFeats))) {
     for (var ref in arrayFeats) {
-        if (arrayFeats.hasOwnProperty(ref)) {
+      if (arrayFeats.hasOwnProperty(ref)) {
+        let pathbuilderFeatItem = arrayFeats[ref];
+        var itemName= pathbuilderFeatItem[0];
+        var itemExtra= pathbuilderFeatItem[1];
 
-        
-          let pathbuilderFeatItem = arrayFeats[ref];
-          var itemName= pathbuilderFeatItem[0];
-          var itemExtra= pathbuilderFeatItem[1];
-            
-          if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofFeat(targetActor, itemName, itemExtra)){
-            var displayName = itemName;
-            addedItems.push(itemName);
-            if (itemExtra!=null){
-              displayName +=" ("+itemExtra+")";
-            }
-            const clonedData = JSON.parse(JSON.stringify(action.data));
-            clonedData.name = displayName;
-
-            try{
-              if (pathbuilderFeatItem[2] && pathbuilderFeatItem[3]){
-                let location = getFoundryFeatLocation(pathbuilderFeatItem[2], pathbuilderFeatItem[3]);
-                if (!usedLocations.includes(location)){
-                  clonedData.data.location = location;
-                  usedLocations.push(location);
-                }                
-              }
-            } catch(err){
-              console.log(err);
-            }
-            
-
-            allItems.push(clonedData);
+        if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofFeat(targetActor, itemName, itemExtra)) {
+          var displayName = itemName;
+          addedItems.push(itemName);
+          if (itemExtra!=null){
+            displayName +=" ("+itemExtra+")";
           }
+          const clonedData = JSON.parse(JSON.stringify(action.data));
+          clonedData.name = displayName;
+
+          try{
+            if (pathbuilderFeatItem[2] && pathbuilderFeatItem[3]){
+              let location = getFoundryFeatLocation(pathbuilderFeatItem[2], pathbuilderFeatItem[3]);
+              if (!usedLocations.includes(location)){
+                clonedData.data.location = location;
+                usedLocations.push(location);
+              }
+            }
+          } catch(err){
+            console.log(err);
+          }
+          allItems.push(clonedData);
         }
-        
+      }
+    }
+  }
+  content = await game.packs.get('pf2e.ancestryfeatures').getDocuments();
+  for (const action of content.filter(item => featIsRequired(item, arrayFeats))) {
+    for (var ref in arrayFeats) {
+      if (arrayFeats.hasOwnProperty(ref)) {
+        let pathbuilderFeatItem = arrayFeats[ref];
+        var itemName= pathbuilderFeatItem[0];
+        var itemExtra= pathbuilderFeatItem[1];
+
+        if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofFeat(targetActor, itemName, itemExtra)){
+          var displayName = itemName;
+          addedItems.push(itemName);
+          if (itemExtra!=null){
+            displayName +=" ("+itemExtra+")";
+          }
+          const clonedData = JSON.parse(JSON.stringify(action.data));
+          clonedData.name = displayName;
+
+          try{
+            if (pathbuilderFeatItem[2] && pathbuilderFeatItem[3]){
+              let location = getFoundryFeatLocation(pathbuilderFeatItem[2], pathbuilderFeatItem[3]);
+              if (!usedLocations.includes(location)){
+                clonedData.data.location = location;
+                usedLocations.push(location);
+              }
+            }
+          } catch(err){
+            console.log(err);
+          }
+          allItems.push(clonedData);
+        }
+      }
     }
   }
   finishedFeats=true;
@@ -770,12 +811,16 @@ async function addFeatItems(targetActor, arrayFeats){
 }
 
 function isNameMatch(pathbuilderItemName, foundryItemSlug){
+  // console.log("comparing "+getSlug(pathbuilderItemName) +" and noquote "+getSlugNoQuote(pathbuilderItemName) + " and class "+getSlug(getClassAdjustedSpecialNameLowerCase(pathbuilderItemName))+" AND ancestry "+ getSlug(getAncestryAdjustedSpecialNameLowerCase(pathbuilderItemName))+" AND heritage: "+ getSlug(getHeritageAdjustedSpecialNameLowerCase(pathbuilderItemName))+" to "+foundryItemSlug);
   if (getSlug(pathbuilderItemName)==foundryItemSlug)return true;
+  if (getSlugNoQuote(pathbuilderItemName)==foundryItemSlug)return true;
   if (getSlug(getClassAdjustedSpecialNameLowerCase(pathbuilderItemName)) == foundryItemSlug) return true;
+  if (getSlug(getAncestryAdjustedSpecialNameLowerCase(pathbuilderItemName)) == foundryItemSlug) return true;
+  if (getSlug(getHeritageAdjustedSpecialNameLowerCase(pathbuilderItemName)) == foundryItemSlug) return true;
   return false;
 }
-async function addActionItems(targetActor, arraySpecials){
 
+async function addActionItems(targetActor, arraySpecials){
   let content = await game.packs.get('pf2e.actionspf2e').getDocuments();
   for (const action of content.filter(item => specialIsRequired(item, arraySpecials))) {
     for (var ref in arraySpecials) {
@@ -791,8 +836,8 @@ async function addActionItems(targetActor, arraySpecials){
   finishedActions = true;
   checkAllFinishedAndCreate(targetActor);
 }
-async function addAncestryFeatureItems(targetActor, arraySpecials){
 
+async function addAncestryFeatureItems(targetActor, arraySpecials){
   let content = await game.packs.get('pf2e.ancestryfeatures').getDocuments();
   for (const action of content.filter(item => specialIsRequired(item, arraySpecials))) {
     for (var ref in arraySpecials) {
@@ -808,8 +853,26 @@ async function addAncestryFeatureItems(targetActor, arraySpecials){
   finishedAncestryFeatures = true;
   checkAllFinishedAndCreate(targetActor);
 }
-async function addClassFeatureItems(targetActor, arraySpecials){
 
+async function addAncestryFeatureFeatItems(targetActor, arraySpecials){
+  let content = await game.packs.get('pf2e.ancestryfeatures').getDocuments();
+  for (const action of content.filter(item => specialIsRequired(item, arraySpecials))) {
+    for (var ref in arraySpecials) {
+      if (arraySpecials.hasOwnProperty(ref)) {
+        var itemName= arraySpecials[ref];
+        // console.log(`is ${itemName} = ${action.data.data.slug}?`);
+        if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofItem(targetActor, itemName)){
+          addedItems.push(itemName);
+          allItems.push(action.data);
+        }
+      }
+    }
+  }
+  finishedAncestryFeatureFeats = true;
+  checkAllFinishedAndCreate(targetActor);
+}
+
+async function addClassFeatureItems(targetActor, arraySpecials){
   let content = await game.packs.get('pf2e.classfeatures').getDocuments();
   for (const action of content.filter(item => specialIsRequired(item, arraySpecials))) {
     for (var ref in arraySpecials) {
@@ -825,8 +888,6 @@ async function addClassFeatureItems(targetActor, arraySpecials){
   finishedClassFeatures = true;
   checkAllFinishedAndCreate(targetActor);
 }
-
-
 
 function hasAdventurersPack(arrayEquipment){
   for (var ref in arrayEquipment) {
@@ -847,11 +908,12 @@ function isSpecialsPack(packName){
 
 function featIsRequired(item, arrayFeats){
   for (var featDetails in arrayFeats) {
-   if (arrayFeats.hasOwnProperty(featDetails)) {
-        if (getSlug(arrayFeats[featDetails][0]) == item.data.data.slug){
-          return true;
-        }
-        if (getSlug(getClassAdjustedSpecialNameLowerCase(arrayFeats[featDetails][0]))== item.data.data.slug) return true;
+    if (arrayFeats.hasOwnProperty(featDetails)) {
+      if (getSlug(arrayFeats[featDetails][0]) == item.data.data.slug) return true;
+      if (getSlugNoQuote(arrayFeats[featDetails][0]) == item.data.data.slug) return true;
+      if (getSlug(getClassAdjustedSpecialNameLowerCase(arrayFeats[featDetails][0]))== item.data.data.slug) return true;
+      if (getSlug(getAncestryAdjustedSpecialNameLowerCase(arrayFeats[featDetails][0]))== item.data.data.slug) return true;
+      if (getSlug(getHeritageAdjustedSpecialNameLowerCase(arrayFeats[featDetails][0]))== item.data.data.slug) return true;
     }
   }
   return false;
@@ -859,39 +921,41 @@ function featIsRequired(item, arrayFeats){
 function specialIsRequired(item, arraySpecials){
   for (var ref in arraySpecials) {
     if (arraySpecials.hasOwnProperty(ref)) {
-
       if (getSlug(arraySpecials[ref]) == item.data.data.slug) return true;
       if (getSlug(getClassAdjustedSpecialNameLowerCase(arraySpecials[ref]))== item.data.data.slug) return true;
+      if (getSlug(getAncestryAdjustedSpecialNameLowerCase(arraySpecials[ref]))== item.data.data.slug) return true;
+      if (getSlug(getHeritageAdjustedSpecialNameLowerCase(arraySpecials[ref]))== item.data.data.slug) return true;
     }
-
   }
   return false;
 }
 function equipmentIsRequired(item, arrayEquipment, arrayWeapons, arrayArmor, arrayKit, addMoney){
   for (var ref in arrayEquipment) {
    if (arrayEquipment.hasOwnProperty(ref)) {
-        if (getSlug(arrayEquipment[ref][0]) === item.data.data.slug) return true;
+      if (getSlug(arrayEquipment[ref][0]) === item.data.data.slug) return true;
+      if (getSlugNoQuote(arrayEquipment[ref][0]) === item.data.data.slug) return true;
     }
   }
   for (var ref in arrayWeapons) {
     if (arrayWeapons.hasOwnProperty(ref)) {
-         if (getSlug(arrayWeapons[ref].name) === item.data.data.slug) return true;
-     }
-   }
-   for (var ref in arrayArmor) {
+      if (getSlug(arrayWeapons[ref].name) === item.data.data.slug) return true;
+      if (getSlugNoQuote(arrayWeapons[ref].name) === item.data.data.slug) return true;
+    }
+  }
+  for (var ref in arrayArmor) {
     if (arrayArmor.hasOwnProperty(ref)) {
-         if (getSlug(arrayArmor[ref].name) === item.data.data.slug) return true;
-     }
-   }
-   for (var ref in arrayKit) {
+       if (getSlug(arrayArmor[ref].name) === item.data.data.slug) return true;
+       if (getSlugNoQuote(arrayArmor[ref].name) === item.data.data.slug) return true;
+    }
+  }
+  for (var ref in arrayKit) {
     if (arrayKit.hasOwnProperty(ref)) {
-        if (arrayKit[ref][0] === item.data.data.slug) return true;
-     }
-   }
-
-   if (addMoney && (item.data.data.slug==="platinum-pieces" || item.data.data.slug==="gold-pieces" || item.data.data.slug==="silver-pieces" || item.data.data.slug==="copper-pieces")){
-     return true;
-   }
+      if (arrayKit[ref][0] === item.data.data.slug) return true;
+    }
+  }
+  if (addMoney && (item.data.data.slug==="platinum-pieces" || item.data.data.slug==="gold-pieces" || item.data.data.slug==="silver-pieces" || item.data.data.slug==="copper-pieces")){
+    return true;
+  }
   return false;
 }
 
@@ -900,8 +964,17 @@ function getClassAdjustedSpecialNameLowerCase(specialName){
   return name.toLowerCase();
 }
 
-function needsNewInstanceofFeat(targetActor, itemName, itemExtra){
+function getAncestryAdjustedSpecialNameLowerCase(specialName){
+  var name = specialName+" ("+jsonBuild.ancestry+")";
+  return name.toLowerCase();
+}
 
+function getHeritageAdjustedSpecialNameLowerCase(specialName){
+  var name = specialName+" ("+jsonBuild.heritage+")";
+  return name.toLowerCase();
+}
+
+function needsNewInstanceofFeat(targetActor, itemName, itemExtra){
   for (const existingItem of targetActor.data.items) {
     var displayName = itemName;
       if (itemExtra!=null)displayName +=" ("+itemExtra+")";
@@ -912,13 +985,11 @@ function needsNewInstanceofFeat(targetActor, itemName, itemExtra){
 function needsNewInstanceofItem(targetActor, itemName){
   for (var ref in targetActor.data.items) {
     if (targetActor.data.items.hasOwnProperty(ref)) {
-            if (targetActor.data.items[ref].name===itemName)return false;
-    }         
+      if (targetActor.data.items[ref].name===itemName)return false;
+    }
  }
  return true;
 }
-
-
 
 function getSizeValue(size){
   switch(size) {
@@ -932,23 +1003,15 @@ function getSizeValue(size){
   return "med";
 }
 
-
-
-
 /// spells
-
 async function setSpellcasters(targetActor, arraySpellcasters, deleteAll){
-
-
   // delete existing spellcasters and spells if not already deleted || i.type === "spell"
-  if (!deleteAll){
+  if (deleteAll){
     let items = targetActor.data.items.filter(i => i.type === "spellcastingEntry");
     let deletions = items.map(i => i.id);
-    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); 
-
+    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
   }
-  
-   // make array of spellcaster instances. put 
+   // make array of spellcaster instances. put
    let requiredSpells=[];
     for (var ref in arraySpellcasters) {
         if (arraySpellcasters.hasOwnProperty(ref)) {
@@ -962,57 +1025,45 @@ async function setSpellcasters(targetActor, arraySpellcasters, deleteAll){
           }
         }
     }
-
     // finishedSpells=true;
     // checkAllFinishedAndCreate(targetActor);
-  
    game.packs.filter(pack => pack.metadata.name === 'spells-srd').forEach(async (pack) => {
     const content = await pack.getDocuments();
     for (const action of content.filter(item => spellIsRequired(item, requiredSpells))) {
       arraySpellcasters.forEach(spellCaster => {
-
         for (var ref in spellCaster.spells) {
           if (spellCaster.spells.hasOwnProperty(ref)) {
-
             let spellListObject = spellCaster.spells[ref];
-
-
             for (var ref in spellListObject.list) {
-                if (spellListObject.list.hasOwnProperty(ref)) {
-                    if (getSlug(spellListObject.list[ref])==action.data.data.slug){
-                        const clonedData = JSON.parse(JSON.stringify(action.data));
-                        clonedData.data.location.value = spellCaster.instance[0].id;
-                        clonedData.data.level.value = spellListObject.spellLevel;
-
-                        allItems.push(clonedData);
-                        break;
-                        
-                    }
-                }         
-             }
-          }         
+              if (spellListObject.list.hasOwnProperty(ref)) {
+                if (getSlug(spellListObject.list[ref])==action.data.data.slug){
+                  const clonedData = JSON.parse(JSON.stringify(action.data));
+                  clonedData.data.location.value = spellCaster.instance[0].id;
+                  clonedData.data.level.value = spellListObject.spellLevel;
+                  allItems.push(clonedData);
+                  break;
+                }
+              }
+            }
+          }
         }
        });
     }
     finishedSpells=true;
     checkAllFinishedAndCreate(targetActor);
   });
-
 }
-
-
 
 function spellIsRequired(item, arraySpells){
     for (var ref in arraySpells) {
         if (arraySpells.hasOwnProperty(ref)) {
             if (getSlug(arraySpells[ref])==item.data.data.slug)return true;
-        }         
+        }
      }
   return false;
 }
 
 async function addSpecificCasterAndSpells(targetActor, spellCaster, magicTradition, spellcastingType){
-
   const spellcastingEntity = {
     ability: {
         type: 'String',
@@ -1044,65 +1095,61 @@ async function addSpecificCasterAndSpells(targetActor, spellCaster, magicTraditi
       slot0: {
         max: spellCaster.perDay[0],
         prepared: [],
-        value: 0
-
+        value: spellCaster.perDay[0]
       },
       slot1: {
         max: spellCaster.perDay[1],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[1]
       },
       slot2: {
         max: spellCaster.perDay[2],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[2]
       },
       slot3: {
         max: spellCaster.perDay[3],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[3]
       },
       slot4: {
         max: spellCaster.perDay[4],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[4]
       },
       slot5: {
         max: spellCaster.perDay[5],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[5],
       },
       slot6: {
         max: spellCaster.perDay[6],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[6],
       },
       slot7: {
         max: spellCaster.perDay[7],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[7],
       },
       slot8: {
         max: spellCaster.perDay[8],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[8],
       },
       slot9: {
         max: spellCaster.perDay[9],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[9],
       },
       slot10: {
         max: spellCaster.perDay[10],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[10],
       },
-
     },
-   
     showUnpreparedSpells: { value: true }
   };
-
   var fake=[];
   const data = {
     name: spellCaster.name,
@@ -1110,8 +1157,6 @@ async function addSpecificCasterAndSpells(targetActor, spellCaster, magicTraditi
     data: spellcastingEntity
   };
   fake.push(data);
-
-
   let spellCasterInstance = await targetActor.createEmbeddedDocuments('Item', fake);
   if (fbpiDebug)
     console.log(spellCasterInstance);
@@ -1119,56 +1164,40 @@ async function addSpecificCasterAndSpells(targetActor, spellCaster, magicTraditi
 }
 
 async function addLores(targetActor, arrayLores){
-
   const arrayLoreData = [];
   for (var ref in arrayLores) {
     if (arrayLores.hasOwnProperty(ref)) {
-        let loreName = arrayLores[ref][0];
-        let loreProf = arrayLores[ref][1];
-
-        if (needsNewInstanceOfLore(targetActor, loreName)){
-
-          const loreData = {
-            proficient: {
-                value: loreProf/2,
-            },
-            featType: "",
-            mod: {
-                value: 0
-            },
-            item: {
-                value: 0
-            }
-  
-          };
-  
-          const data = {
-            name: loreName,
-            type: 'lore',
-            data: loreData,
-          };
-  
-          arrayLoreData.push(data);
-         
-
-      
-
-
-        } else {
-
-          for (var ref in targetActor.data.items) {
-            if (targetActor.data.items.hasOwnProperty(ref)) {
-                if (targetActor.data.items[ref].name===loreName){
-                  const update = {id: targetActor.data.items[ref].id, 'data.proficient.value': loreProf/2};
-                  targetActor.updateEmbeddedEntity("Item", update); // Updates one EmbeddedEntity
-                }
-            }         
+      let loreName = arrayLores[ref][0];
+      let loreProf = arrayLores[ref][1];
+      if (needsNewInstanceOfLore(targetActor, loreName)){
+        const loreData = {
+          proficient: {
+            value: loreProf/2,
+          },
+          featType: "",
+          mod: {
+            value: 0
+          },
+          item: {
+            value: 0
           }
-
+        };
+        const data = {
+          name: loreName,
+          type: 'lore',
+          data: loreData,
+        };
+        arrayLoreData.push(data);
+      } else {
+        for (var ref in targetActor.data.items) {
+          if (targetActor.data.items.hasOwnProperty(ref)) {
+            if (targetActor.data.items[ref].name===loreName){
+              const update = {id: targetActor.data.items[ref].id, 'data.proficient.value': loreProf/2};
+              targetActor.updateEmbeddedEntity("Item", update); // Updates one EmbeddedEntity
+            }
+          }
         }
-
-        
-
+      }
     }
   }
   if (arrayLoreData.length>0){
@@ -1180,14 +1209,12 @@ function needsNewInstanceOfLore(targetActor, loreName){
   for (var ref in targetActor.data.items) {
     if (targetActor.data.items.hasOwnProperty(ref)) {
             if (targetActor.data.items[ref].name===loreName)return false;
-    }         
+    }
   }
   return true;
 }
 
-
 function checkAllFinishedAndCreate(targetActor){
-
   if (finishedFeats && finishedEquipment && finishedSpells && finishedActions && finishedAncestryFeatures && finishedClassFeatures){
     let finished = targetActor.createEmbeddedDocuments("Item", allItems);
     if (finished){
@@ -1231,11 +1258,11 @@ function checkAllFinishedAndCreate(targetActor){
           }
         }
       }
-     
+
       warning+="</ul><br>";
 
       if (notAddedCount>0){
-
+        ui.notifications.warn("Import completed with some warnings.");
         new Dialog({
           title: `Pathbuilder Import Warning`,
           content: warning,
@@ -1246,19 +1273,60 @@ function checkAllFinishedAndCreate(targetActor){
             },
           },
           default: "yes",
-          close: html => {}
+          close: html => {
+            if (heroVaultExport) {
+              let heroJSON = JSON.stringify(targetActor.data);
+              if (fbpiDebug)
+                console.log(heroJSON);
+              doHVExport(heroJSON,targetActor);
+            }
+          }
         }).render(true);
+      } else {
+        ui.notifications.info("Import completed successfully.");
+        if (heroVaultExport) {
+          let heroJSON = JSON.stringify(targetActor.data);
+          if (fbpiDebug)
+            console.log(heroJSON);
+          doHVExport(heroJSON,targetActor);
+        }
       }
     }
   }
 }
 
 function getSlug(itemName){
-  return itemName.toLowerCase()
+  return itemName.toString().toLowerCase()
     .replace(/[^a-z0-9]+/gi, ' ')
     .trim()
     .replace(/\s+|-{2,}/g, '-');
 }
+function getSlugNoQuote(itemName){
+  return itemName.toString().toLowerCase()
+    .replace(/[\']+/gi, '')
+    .replace(/[^a-z0-9]+/gi, ' ')
+    .trim()
+    .replace(/\s+|-{2,}/g, '-');
+}
+
+function mapItemToFoundryName(itemName) {
+  if (fbpiDebug)
+    console.log("Checking map for '"+itemName+"'")
+  const changeNames=[{'name':'Chain','newname':'Chain (10 feet)'}]
+  const newNameIdx = changeNames.findIndex(function(item) {return item.name==itemName});
+  // if (newNameIdx>-1) console.log(changeNames[newNameIdx]['newname']);
+  return (newNameIdx >-1) ? changeNames[newNameIdx]['newname'] : itemName;
+}
+
+function mapSpecialToFoundryName(itemName) {
+  if (fbpiDebug)
+    console.log("Checking map for '"+itemName+"'")
+  const changeNames=[{'name':'Maestro','newname':'Maestro Muse'},{"name": "Duelist Dedication (LO)", "newname": "Aldori Duelist Dedication"}, {"name": "Parry", "newname": "Aldori Parry"}, {"name": "Riposte", "newname": "Aldori Riposte"}, {"name": "Sentry Dedication", "newname": "Lastwall Sentry Dedication"}, {"name": "Wary Eye", "newname": "Eye of Ozem"}, {"name": "Warden", "newname": "Lastwall Warden"}, {"name": "Heavenseeker Dedication", "newname": "Jalmeri Heavenseeker Dedication"}, {"name": "Mantis God's Grip", "newname": "Achaekek's Grip"}, {"name": "High Killer Training", "newname": "Vernai Training"}, {"name": "Guild Agent Dedication", "newname": "Pathfinder Agent Dedication"}, {"name": "Wayfinder Resonance Infiltrator", "newname": "Westyr's Wayfinder Repository"}, {"name": "Collegiate Attendant Dedication", "newname": "Magaambyan Attendant Dedication"}, {"name": "Scholarly Storytelling", "newname": "Uzunjati Storytelling"}, {"name": "Scholarly Recollection", "newname": "Uzunjati Recollection"}, {"name": "Secret Lesson", "newname": "Janatimo's Lessons"}, {"name": "Lumberjack Dedication", "newname": "Turpin Rowe Lumberjack Dedication"}, {"name": "Fourberie", "newname": "Fane's Fourberie"}, {"name": "Escape", "newname": "Fane's Escape"}, {"name": "Stab and Snag", "newname": "Stella's Stab and Snag"}, {"name":"Cognitive Crossover", "newname":"Kreighton's Cognitive Crossover"}]
+  const newNameIdx = changeNames.findIndex(function(item) {return item.name==itemName});
+  // if (newNameIdx>-1) console.log(changeNames[newNameIdx]['newname']);
+  return (newNameIdx >-1) ? changeNames[newNameIdx]['newname'] : itemName;
+}
+
 function getFoundryFeatLocation(pathbuilderFeatType, pathbuilderFeatLevel){
   if (pathbuilderFeatType=="Ancestry Feat"){
     return "ancestry-"+pathbuilderFeatLevel;
