@@ -17,5 +17,7 @@
   "download": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/releases/download/foundry-pathbuilder2e-import-0.2.4/foundry-pathbuilder2e-import-0.2.4.zip",
   "changelog": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/blob/master/CHANGELOG.md",
   "bugs": "https://github.com/zarmstrong/herovau.lt-foundry/issues",
-  "allowBugReporter": true
+  "flags": {
+    "allowBugReporter": true
+  }
 }
