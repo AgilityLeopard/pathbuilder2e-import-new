@@ -1,3 +1,7 @@
+## 0.3.1 (Jun 29, 2021)
+
+* fix bad config
+
 ## 0.3.0 (Jun 28, 2021)
 
 * integrates with HeroVau.lt module
