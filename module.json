@@ -1,17 +1,21 @@
 {
   "name": "pathbuilder2e-import",
   "title": "Pathbuilder 2e Import",
-  "description": "This module adds a button to the top of player character sheets allowing them to quickly import their character from Pathbuilder 2e.",
-  "author": "Redrazors",
-  "version": "0.2.3",
-  "minimumCoreVersion": "0.8.7",
-  "compatibleCoreVersion": "0.8.7",
-  "scripts": [ 
-        "./pathbuilder-import.js"
+  "description": "This module allows players and GMs to import player characters built in Pathbuilder 2e",
+  "author": "slate",
+  "version": "0.2.4",
+  "minimumCoreVersion": "0.8.6",
+  "compatibleCoreVersion": "0.8.8",
+  "esmodules": [ 
+        "pathbuilder-import-min.js"
     ],
   "styles": [],
   "packs": [],
-  "url": "https://github.com/Doctor-Unspeakable/foundry-pathbuilder2e-import",
-  "manifest": "https://raw.githubusercontent.com/Doctor-Unspeakable/foundry-pathbuilder2e-import/master/module.json",
-  "download": "https://github.com/Doctor-Unspeakable/foundry-pathbuilder2e-import/archive/23.zip"
+  "license": "MIT",
+  "url": "https://github.com/zarmstrong/foundry-pathbuilder2e-import",
+  "manifest": "https://raw.githubusercontent.com/zarmstrong/foundry-pathbuilder2e-import/master/module.json",
+  "download": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/releases/download/foundry-pathbuilder2e-import-0.2.4/foundry-pathbuilder2e-import-0.2.4.zip",
+  "changelog": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/blob/master/CHANGELOG.md",
+  "bugs": "https://github.com/zarmstrong/herovau.lt-foundry/issues",
+  "allowBugReporter": true
 }

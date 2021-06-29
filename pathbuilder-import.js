@@ -1,21 +1,5 @@
-const fbpiDebug=false;
+const fbpiDebug=true;
 const fpbi="0.2.3";
-Hooks.on('renderActorSheet', function(obj, html){
-
-  // Only inject the link if the actor is of type "character" and the user has permission to update it
-  const actor = obj.actor;
-  if (!(actor.data.type === "character")){ return;}
-  if (actor.canUserModify(game.user, "update")==false){ return;}
-
-  let element = html.find(".window-header .window-title");
-  if (element.length != 1) return;
-
-  let button = $(`<a class="popout" style><i class="fas fa-book"></i>Import from Pathbuilder 2e</a>`);
-  button.on('click', () => beginPathbuilderImport(obj.object));
-  element.after(button);
-  }
-   
-);
 
 var applyChanges = false;
 var finishedFeats = false;
@@ -35,10 +19,45 @@ var heroVaultExport=false;
 var allItems=[];
 var jsonBuild=[];
 var addedItems=[];
+let isHV=false;
 
+async function doHV() {
+  if (game.modules.get('herovaultfoundry')?.active){
+    let {supportCheck} = await import('../herovaultfoundry/herovault-min.js');
+    if (typeof supportCheck !== "undefined")
+      isHV=supportCheck();
+    if (fbpiDebug)
+      console.log("is hv?: "+isHV);
+  }
+}
 
-function beginPathbuilderImport(targetActor,isHV=false){
+async function doHVExport(hero,act) {
+  if (game.modules.get('herovaultfoundry')?.active){
+    let {exportToHVFromPBHLO} = await import('../herovaultfoundry/herovault-min.js');
+    if (typeof exportToHVFromPBHLO !== "undefined") {
+      exportToHVFromPBHLO(hero,act);
+    }
+  }  
+  return
+}
 
+Hooks.on('renderActorSheet', async function(obj, html){
+  await doHV();  
+  // Only inject the link if the actor is of type "character" and the user has permission to update it
+  const actor = obj.actor;
+  if (!(actor.data.type === "character")){ return;}
+  if (actor.canUserModify(game.user, "update")==false){ return;}
+
+  let element = html.find(".window-header .window-title");
+  if (element.length != 1) return;
+  if (isHV==false) {
+    let button = $(`<a class="popout" style><i class="fas fa-book"></i>Import from Pathbuilder 2e</a>`);
+    button.on('click', () => beginPathbuilderImport(obj.object));
+    element.after(button);
+  }
+});
+
+export async function beginPathbuilderImport(targetActor,isHV=false){
   applyChanges = false;
   finishedFeats = false;
   finishedActions = false;
@@ -54,12 +73,14 @@ function beginPathbuilderImport(targetActor,isHV=false){
     title: `Pathbuilder Import`,
     content: `      
       <div>
+        <p><strong>It is strongly advised to import to a blank PC and not overwrite an existing PC.</strong></p>
+        <hr>
         <p>Step 1: Refresh this browser page!</p>
         <p>Step 2: Export your character from Pathbuilder 2e via the app menu</p>
         <p>Step 3: Enter the 6 digit user ID number from the pathbuilder export dialog below</p>
         <br>
         <p>Please note - items which cannot be matched to the Foundry database will not be imported!<p>
-        <p>Spells are not currently being imported.</p>
+        
       <div>
       <hr/>
       <form>
@@ -136,23 +157,25 @@ function beginPathbuilderImport(targetActor,isHV=false){
     close: html => {
       if (applyChanges) {
          
-         let buildID= html.find('[id="textBoxBuildID"]')[0].value;
-         if (!isNormalInteger(buildID)){
-             ui.notifications.warn("Build ID must be a positive integer!");
-             return;
-         }
-         addFeats = html.find('[name="checkBoxFeats"]')[0].checked;
+        let buildID= html.find('[id="textBoxBuildID"]')[0].value;
+        if (!isNormalInteger(buildID)){
+          ui.notifications.warn("Build ID must be a positive integer!");
+          return;
+        }
+        addFeats = html.find('[name="checkBoxFeats"]')[0].checked;
   
-         addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked;
+        addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked;
   
-         addMoney = html.find('[name="checkBoxMoney"]')[0].checked;
+        addMoney = html.find('[name="checkBoxMoney"]')[0].checked;
   
-         addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
+        addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
   
-         deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
-         if (isHV)
+        deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
+        if (isHV)
           heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked;
-         fetchPathbuilderBuild(targetActor, buildID);
+        if (fbpiDebug)
+          console.log("Got heroVaultExport:" + heroVaultExport);
+        fetchPathbuilderBuild(targetActor, buildID);
   
       }
     }
@@ -213,6 +236,7 @@ function checkCharacterIsCorrect(targetActor,jsonBuild){
     default: "yes",
     close: html => {
       if (correctCharacter) {
+        ui.notifications.info("Please be patient while "+jsonBuild.name+" is imported."); 
         importCharacter(targetActor, jsonBuild);
       }
     }
@@ -302,7 +326,14 @@ for (var ref in arraySpecials){
 
     // 'data.details.class.value': jsonBuild.class,
     // 'data.details.ancestry.value': jsonBuild.ancestry,
-
+  let conEven = (jsonBuild.abilities.con % 2 ==0 ? jsonBuild.abilities.con : jsonBuild.abilities.con-1)-10;
+  let conBonus=0;
+  if (conEven >0)
+    conBonus=conEven/2
+  else
+    conBonus=((conEven*-1)/2)*-1
+  const currentHP=jsonBuild.attributes.bonushp+(jsonBuild.attributes.classhp*jsonBuild.level)+jsonBuild.attributes.ancestryhp+(conBonus*jsonBuild.level);
+  console.log("HP: "+currentHP);
   targetActor.update({
     'name': jsonBuild.name, 
     'data.details.level.value': jsonBuild.level, 
@@ -329,6 +360,7 @@ for (var ref in arraySpecials){
     'data.attributes.classhp': jsonBuild.attributes.classhp,
     'data.attributes.speed.value': jsonBuild.attributes.speed,
     'data.attributes.flatbonushp': jsonBuild.attributes.bonushp,
+    'data.attributes.hp.value': currentHP,
 
     'data.saves.fortitude.rank': jsonBuild.proficiencies.fortitude/2,
     'data.saves.reflex.rank': jsonBuild.proficiencies.reflex/2,
@@ -374,7 +406,7 @@ for (var ref in arraySpecials){
 
   // // //ancestry
   if (targetActor.data.data.details.ancestry!=jsonBuild.ancestry){
-    if (!deleteAll){
+    if (deleteAll){
       const items = targetActor.data.items.filter(i => i.type === "ancestry");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
@@ -386,12 +418,10 @@ for (var ref in arraySpecials){
         }
     }
   }
-  
-  
 
   // //class
   if (targetActor.data.data.details.class!=jsonBuild.class){
-    if (!deleteAll){
+    if (deleteAll){
       const items = targetActor.data.items.filter(i => i.type === "class");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
@@ -669,10 +699,7 @@ for (var ref in arraySpecials){
   }
 
   addLores(targetActor, arrayLores);
- 
-  if (heroVaultExport) {
-    heroJSON = JSON.stringify(targetActor.data);
-  }
+
 }
 
 // function getExistingClassSlug(targetActor){
@@ -794,6 +821,23 @@ async function addActionItems(targetActor, arraySpecials){
   checkAllFinishedAndCreate(targetActor);
 }
 async function addAncestryFeatureItems(targetActor, arraySpecials){
+
+  let content = await game.packs.get('pf2e.ancestryfeatures').getDocuments();
+  for (const action of content.filter(item => specialIsRequired(item, arraySpecials))) {
+    for (var ref in arraySpecials) {
+      if (arraySpecials.hasOwnProperty(ref)) {
+        var itemName= arraySpecials[ref];
+        if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofItem(targetActor, itemName)){
+          addedItems.push(itemName);
+          allItems.push(action.data);
+        }
+      }
+    }
+  }
+  finishedAncestryFeatures = true;
+  checkAllFinishedAndCreate(targetActor);
+}
+async function addAncestryFeatureFeatItems(targetActor, arraySpecials){
 
   let content = await game.packs.get('pf2e.ancestryfeatures').getDocuments();
   for (const action of content.filter(item => specialIsRequired(item, arraySpecials))) {
@@ -943,7 +987,7 @@ async function setSpellcasters(targetActor, arraySpellcasters, deleteAll){
 
 
   // delete existing spellcasters and spells if not already deleted || i.type === "spell"
-  if (!deleteAll){
+  if (deleteAll){
     let items = targetActor.data.items.filter(i => i.type === "spellcastingEntry");
     let deletions = items.map(i => i.id);
     let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); 
@@ -1046,62 +1090,60 @@ async function addSpecificCasterAndSpells(targetActor, spellCaster, magicTraditi
       slot0: {
         max: spellCaster.perDay[0],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[0]
 
       },
       slot1: {
         max: spellCaster.perDay[1],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[1]
       },
       slot2: {
         max: spellCaster.perDay[2],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[2]
       },
       slot3: {
         max: spellCaster.perDay[3],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[3]
       },
       slot4: {
         max: spellCaster.perDay[4],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[4]
       },
       slot5: {
         max: spellCaster.perDay[5],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[5],
       },
       slot6: {
         max: spellCaster.perDay[6],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[6],
       },
       slot7: {
         max: spellCaster.perDay[7],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[7],
       },
       slot8: {
         max: spellCaster.perDay[8],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[8],
       },
       slot9: {
         max: spellCaster.perDay[9],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[9],
       },
       slot10: {
         max: spellCaster.perDay[10],
         prepared: [],
-        value: 0
+        value: spellCaster.perDay[10],
       },
-
     },
-   
     showUnpreparedSpells: { value: true }
   };
 
@@ -1237,7 +1279,7 @@ function checkAllFinishedAndCreate(targetActor){
       warning+="</ul><br>";
 
       if (notAddedCount>0){
-
+        ui.notifications.info("Import complete."); 
         new Dialog({
           title: `Pathbuilder Import Warning`,
           content: warning,
@@ -1248,7 +1290,16 @@ function checkAllFinishedAndCreate(targetActor){
             },
           },
           default: "yes",
-          close: html => {}
+          close: html => {
+              if (heroVaultExport) {
+                let heroJSON = JSON.stringify(targetActor.data);
+                if (fbpiDebug)
+                  console.log(heroJSON);
+                doHVExport(heroJSON,targetActor);
+
+              }
+
+          }
         }).render(true);
       }
     }
@@ -1256,7 +1307,7 @@ function checkAllFinishedAndCreate(targetActor){
 }
 
 function getSlug(itemName){
-  return itemName.toLowerCase()
+  return itemName.toString().toLowerCase()
     .replace(/[^a-z0-9]+/gi, ' ')
     .trim()
     .replace(/\s+|-{2,}/g, '-');
