@@ -1,5 +1,5 @@
 const fbpiDebug=true;
-const fpbi="0.3.2";
+const fpbi="0.3.3";
 
 var applyChanges = false;
 var finishedFeats = false;
@@ -23,7 +23,7 @@ let isHV=false;
 
 async function doHV() {
   if (game.modules.get('herovaultfoundry')?.active){
-    let {supportCheck} = await import('../herovaultfoundry/herovault-min.js');
+    let {supportCheck} = await import('/modules/herovaultfoundry/herovault-min.js');
     if (typeof supportCheck !== "undefined")
       isHV=supportCheck();
     if (fbpiDebug)
@@ -33,7 +33,7 @@ async function doHV() {
 
 async function doHVExport(hero,act) {
   if (game.modules.get('herovaultfoundry')?.active){
-    let {exportToHVFromPBHLO} = await import('../herovaultfoundry/herovault-min.js');
+    let {exportToHVFromPBHLO} = await import('/modules/herovaultfoundry/herovault-min.js');
     if (typeof exportToHVFromPBHLO !== "undefined") {
       exportToHVFromPBHLO(hero,act);
     }

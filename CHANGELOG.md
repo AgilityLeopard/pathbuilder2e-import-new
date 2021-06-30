@@ -1,3 +1,7 @@
+## 0.3.3 (Jun 30, 2021)
+
+* change relative paths to absolute for imports
+
 ## 0.3.2 (Jun 30, 2021)
 
 * fixed the delete all to actually delete all
