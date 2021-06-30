@@ -1,3 +1,8 @@
+## 0.3.2 (Jun 30, 2021)
+
+* fixed the delete all to actually delete all
+* include exportsource info within exports to HeroVau.lt
+
 ## 0.3.1 (Jun 29, 2021)
 
 * fix bad config
