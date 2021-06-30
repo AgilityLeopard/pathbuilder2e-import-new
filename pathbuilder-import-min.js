@@ -1,4 +1,4 @@
-const fbpiDebug=true;const fpbi="0.3.1";var applyChanges=false;var finishedFeats=false;var finishedActions=false;var finishedClassFeatures=false;var finishedAncestryFeatures=false;var finishedEquipment=false;var finishedSpells=false;var addFeats=false;var addEquipment=false;var addMoney=false;var addSpellcasters=false;var deleteAll=false;var heroVaultExport=false;var allItems=[];var jsonBuild=[];var addedItems=[];let isHV=false;async function doHV(){if(game.modules.get('herovaultfoundry')?.active){let{supportCheck}=await import('../herovaultfoundry/herovault-min.js');if(typeof supportCheck!=="undefined")
+const fbpiDebug=true;const fpbi="0.3.2";var applyChanges=false;var finishedFeats=false;var finishedActions=false;var finishedClassFeatures=false;var finishedAncestryFeatures=false;var finishedEquipment=false;var finishedSpells=false;var addFeats=false;var addEquipment=false;var addMoney=false;var addSpellcasters=false;var deleteAll=false;var heroVaultExport=false;var allItems=[];var jsonBuild=[];var addedItems=[];let isHV=false;async function doHV(){if(game.modules.get('herovaultfoundry')?.active){let{supportCheck}=await import('../herovaultfoundry/herovault-min.js');if(typeof supportCheck!=="undefined")
 isHV=supportCheck();if(fbpiDebug)
 console.log("is hv?: "+isHV);}}
 async function doHVExport(hero,act){if(game.modules.get('herovaultfoundry')?.active){let{exportToHVFromPBHLO}=await import('../herovaultfoundry/herovault-min.js');if(typeof exportToHVFromPBHLO!=="undefined"){exportToHVFromPBHLO(hero,act);}}
@@ -15,7 +15,6 @@ heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" 
         <p>Step 3: Enter the 6 digit user ID number from the pathbuilder export dialog below</p>
         <br>
         <p>Please note - items which cannot be matched to the Foundry database will not be imported!<p>
-
       <div>
       <hr/>
       <form>
@@ -26,9 +25,9 @@ heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" 
           <input type="checkbox" id="checkBoxMoney" name="checkBoxMoney" checked>
           <label for="checkBoxMoney"> Import Money?</label><br><br>
           <input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll" checked>
-          <label for="checkBoxDeleteAll"> Delete all existing items before import (excluding spells)?</label><br><br>
+          <label for="checkBoxDeleteAll"> Delete all existing items before import (including spells)?</label><br><br>
           <input type="checkbox" id="checkBoxSpells" name="checkBoxSpells" checked>
-          <label for="checkBoxSpells"> Import Spells? (Deletes existing)</label><br><br>
+          <label for="checkBoxSpells"> Import Spells? (Always deletes existing)</label><br><br>
           ${heroVault}
       </form>
       <div id="divCode">
@@ -41,7 +40,6 @@ heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" 
       </div>
       <br><br>
       <style>
-
         #textBoxBuildID {
             border: 0px;
             padding-left: 15px;
@@ -54,17 +52,14 @@ heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" 
             width: 330px;
             min-width: 330px;
           }
-
           #divInner{
             left: 0;
             position: sticky;
           }
-
           #divOuter{
             width: 285px;
             overflow: hidden;
           }
-
           #divCode{
             border: 1px solid black;
             width: 300px;
@@ -74,7 +69,6 @@ heroVault='<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" 
           #checkBoxMoney{
             margin-left: 35px;
           }
-
       </style>
       `,buttons:{yes:{icon:"<i class='fas fa-check'></i>",label:`Import`,callback:()=>applyChanges=true},no:{icon:"<i class='fas fa-times'></i>",label:`Cancel`},},default:"yes",close:html=>{if(applyChanges){let buildID=html.find('[id="textBoxBuildID"]')[0].value;if(!isNormalInteger(buildID)){ui.notifications.warn("Build ID must be a positive integer!");return;}
 addFeats=html.find('[name="checkBoxFeats"]')[0].checked;addEquipment=html.find('[name="checkBoxEquipment"]')[0].checked;addMoney=html.find('[name="checkBoxMoney"]')[0].checked;addSpellcasters=html.find('[name="checkBoxSpells"]')[0].checked;deleteAll=html.find('[name="checkBoxDeleteAll"]')[0].checked;if(isHV)
@@ -90,7 +84,11 @@ function shouldBeManuallyDeleted(i){if(i.data.type=="feat"){if(i.data.data.featT
 if(i.data.type=="spell"){return false;}
 if(i.data.type=="spellcastingEntry"){return false;}
 return true;}
-async function importCharacter(targetActor,jsonBuild){if(deleteAll){const items=targetActor.data.items.filter(i=>shouldBeManuallyDeleted(i));const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}else if(addMoney){let items=targetActor.data.items.filter(i=>i.name==="Platinum Pieces"||i.name==="Gold Pieces"||i.name==="Silver Pieces"||i.name==="Copper Pieces");let deletions=items.map(i=>i.id);let updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
+async function importCharacter(targetActor,jsonBuild){if(deleteAll){if(fbpiDebug)
+console.log("Deleting all items")
+let deletions=targetActor.data.items.map(i=>i.id);let updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}else if(addMoney){if(fbpiDebug)
+console.log("Deleting money")
+let items=targetActor.data.items.filter(i=>i.name==="Platinum Pieces"||i.name==="Gold Pieces"||i.name==="Silver Pieces"||i.name==="Copper Pieces");let deletions=items.map(i=>i.id);let updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
 let arrayFeats=jsonBuild.feats;let arrayEquipment=jsonBuild.equipment;let arrayWeapons=jsonBuild.weapons;let arrayArmor=jsonBuild.armor;let arraySpecials=jsonBuild.specials;let arrayLores=jsonBuild.lores;for(var ref in jsonBuild.languages){if(jsonBuild.languages.hasOwnProperty(ref)){jsonBuild.languages[ref]=jsonBuild.languages[ref].toLowerCase();}}
 for(var ref in arrayEquipment){arrayEquipment[ref][0]=mapItemToFoundryName(arrayEquipment[ref][0]);}
 for(var ref in arraySpecials){arraySpecials[ref]=mapSpecialToFoundryName(arraySpecials[ref]);}
@@ -100,11 +98,15 @@ let conEven=(jsonBuild.abilities.con%2==0?jsonBuild.abilities.con:jsonBuild.abil
 conBonus=conEven/2
 else
 conBonus=((conEven*-1)/2)*-1
-const currentHP=jsonBuild.attributes.bonushp+(jsonBuild.attributes.classhp*jsonBuild.level)+jsonBuild.attributes.ancestryhp+(conBonus*jsonBuild.level);targetActor.update({'name':jsonBuild.name,'data.details.level.value':jsonBuild.level,'data.details.heritage.value':jsonBuild.heritage,'data.details.age.value':jsonBuild.age,'data.details.gender.value':jsonBuild.gender,'data.details.keyability.value':jsonBuild.keyability,'data.traits.size.value':getSizeValue(jsonBuild.size),'data.traits.languages.value':jsonBuild.languages,'data.traits.senses':senses,'data.abilities.str.value':jsonBuild.abilities.str,'data.abilities.dex.value':jsonBuild.abilities.dex,'data.abilities.con.value':jsonBuild.abilities.con,'data.abilities.int.value':jsonBuild.abilities.int,'data.abilities.wis.value':jsonBuild.abilities.wis,'data.abilities.cha.value':jsonBuild.abilities.cha,'data.attributes.ancestryhp':jsonBuild.attributes.ancestryhp,'data.attributes.classhp':jsonBuild.attributes.classhp,'data.attributes.speed.value':jsonBuild.attributes.speed,'data.attributes.flatbonushp':jsonBuild.attributes.bonushp,'data.attributes.hp.value':currentHP,'data.saves.fortitude.rank':jsonBuild.proficiencies.fortitude/2,'data.saves.reflex.rank':jsonBuild.proficiencies.reflex/2,'data.saves.will.rank':jsonBuild.proficiencies.will/2,'data.martial.advanced.rank':jsonBuild.proficiencies.advanced/2,'data.martial.heavy.rank':jsonBuild.proficiencies.heavy/2,'data.martial.light.rank':jsonBuild.proficiencies.light/2,'data.martial.medium.rank':jsonBuild.proficiencies.medium/2,'data.martial.unarmored.rank':jsonBuild.proficiencies.unarmored/2,'data.martial.martial.rank':jsonBuild.proficiencies.martial/2,'data.martial.simple.rank':jsonBuild.proficiencies.simple/2,'data.martial.unarmed.rank':jsonBuild.proficiencies.unarmed/2,'data.skills.acr.rank':jsonBuild.proficiencies.acrobatics/2,'data.skills.arc.rank':jsonBuild.proficiencies.arcana/2,'data.skills.ath.rank':jsonBuild.proficiencies.athletics/2,'data.skills.cra.rank':jsonBuild.proficiencies.crafting/2,'data.skills.dec.rank':jsonBuild.proficiencies.deception/2,'data.skills.dip.rank':jsonBuild.proficiencies.diplomacy/2,'data.skills.itm.rank':jsonBuild.proficiencies.intimidation/2,'data.skills.med.rank':jsonBuild.proficiencies.medicine/2,'data.skills.nat.rank':jsonBuild.proficiencies.nature/2,'data.skills.occ.rank':jsonBuild.proficiencies.occultism/2,'data.skills.prf.rank':jsonBuild.proficiencies.performance/2,'data.skills.rel.rank':jsonBuild.proficiencies.religion/2,'data.skills.soc.rank':jsonBuild.proficiencies.society/2,'data.skills.ste.rank':jsonBuild.proficiencies.stealth/2,'data.skills.sur.rank':jsonBuild.proficiencies.survival/2,'data.skills.thi.rank':jsonBuild.proficiencies.thievery/2,'data.attributes.perception.rank':jsonBuild.proficiencies.perception/2,'data.attributes.classDC.rank':jsonBuild.proficiencies.classDC/2});if(targetActor.data.data.details.background==null||targetActor.data.data.details.background.value!=jsonBuild.background){if(deleteAll){const items=targetActor.data.items.filter(i=>i.type==="background");const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
+const currentHP=jsonBuild.attributes.bonushp+(jsonBuild.attributes.classhp*jsonBuild.level)+jsonBuild.attributes.ancestryhp+(conBonus*jsonBuild.level);targetActor.update({'name':jsonBuild.name,'data.details.level.value':jsonBuild.level,'data.details.heritage.value':jsonBuild.heritage,'data.details.age.value':jsonBuild.age,'data.details.gender.value':jsonBuild.gender,'data.details.keyability.value':jsonBuild.keyability,'data.traits.size.value':getSizeValue(jsonBuild.size),'data.traits.languages.value':jsonBuild.languages,'data.traits.senses':senses,'data.abilities.str.value':jsonBuild.abilities.str,'data.abilities.dex.value':jsonBuild.abilities.dex,'data.abilities.con.value':jsonBuild.abilities.con,'data.abilities.int.value':jsonBuild.abilities.int,'data.abilities.wis.value':jsonBuild.abilities.wis,'data.abilities.cha.value':jsonBuild.abilities.cha,'data.attributes.ancestryhp':jsonBuild.attributes.ancestryhp,'data.attributes.classhp':jsonBuild.attributes.classhp,'data.attributes.speed.value':jsonBuild.attributes.speed,'data.attributes.flatbonushp':jsonBuild.attributes.bonushp,'data.attributes.hp.value':currentHP,'data.saves.fortitude.rank':jsonBuild.proficiencies.fortitude/2,'data.saves.reflex.rank':jsonBuild.proficiencies.reflex/2,'data.saves.will.rank':jsonBuild.proficiencies.will/2,'data.martial.advanced.rank':jsonBuild.proficiencies.advanced/2,'data.martial.heavy.rank':jsonBuild.proficiencies.heavy/2,'data.martial.light.rank':jsonBuild.proficiencies.light/2,'data.martial.medium.rank':jsonBuild.proficiencies.medium/2,'data.martial.unarmored.rank':jsonBuild.proficiencies.unarmored/2,'data.martial.martial.rank':jsonBuild.proficiencies.martial/2,'data.martial.simple.rank':jsonBuild.proficiencies.simple/2,'data.martial.unarmed.rank':jsonBuild.proficiencies.unarmed/2,'data.skills.acr.rank':jsonBuild.proficiencies.acrobatics/2,'data.skills.arc.rank':jsonBuild.proficiencies.arcana/2,'data.skills.ath.rank':jsonBuild.proficiencies.athletics/2,'data.skills.cra.rank':jsonBuild.proficiencies.crafting/2,'data.skills.dec.rank':jsonBuild.proficiencies.deception/2,'data.skills.dip.rank':jsonBuild.proficiencies.diplomacy/2,'data.skills.itm.rank':jsonBuild.proficiencies.intimidation/2,'data.skills.med.rank':jsonBuild.proficiencies.medicine/2,'data.skills.nat.rank':jsonBuild.proficiencies.nature/2,'data.skills.occ.rank':jsonBuild.proficiencies.occultism/2,'data.skills.prf.rank':jsonBuild.proficiencies.performance/2,'data.skills.rel.rank':jsonBuild.proficiencies.religion/2,'data.skills.soc.rank':jsonBuild.proficiencies.society/2,'data.skills.ste.rank':jsonBuild.proficiencies.stealth/2,'data.skills.sur.rank':jsonBuild.proficiencies.survival/2,'data.skills.thi.rank':jsonBuild.proficiencies.thievery/2,'data.attributes.perception.rank':jsonBuild.proficiencies.perception/2,'data.attributes.classDC.rank':jsonBuild.proficiencies.classDC/2});if(targetActor.data.data.details.background==null||targetActor.data.data.details.background.value!=jsonBuild.background){if(deleteAll){if(fbpiDebug)
+console.log("Deleting background");const items=targetActor.data.items.filter(i=>i.type==="background");const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
 let packBackground=await game.packs.get('pf2e.backgrounds').getDocuments();for(const item of packBackground){if(item.data.data.slug==getSlug(jsonBuild.background)){allItems.push(item.data);}}}
-if(targetActor.data.data.details.ancestry!=jsonBuild.ancestry){if(deleteAll){const items=targetActor.data.items.filter(i=>i.type==="ancestry");const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
+if(targetActor.data.data.details.ancestry!=jsonBuild.ancestry){if(deleteAll){if(fbpiDebug)
+console.log("deleting ancestry");const items=targetActor.data.items.filter(i=>i.type==="ancestry");const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
 let packAncestry=await game.packs.get('pf2e.ancestries').getDocuments();for(const item of packAncestry){if(item.data.data.slug==getSlug(jsonBuild.ancestry)){allItems.push(item.data);}}}
-if(targetActor.data.data.details.class!=jsonBuild.class){if(deleteAll){const items=targetActor.data.items.filter(i=>i.type==="class");const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
+if(targetActor.data.data.details.class!=jsonBuild.class){if(deleteAll){if(fbpiDebug)
+console.log("Deleting class")
+const items=targetActor.data.items.filter(i=>i.type==="class");const deletions=items.map(i=>i.id);const updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
 let packClasses=await game.packs.get('pf2e.classes').getDocuments();for(const item of packClasses){if(item.data.data.slug==getSlug(jsonBuild.class)){allItems.push(item.data);}}}
 const blacklist=[jsonBuild.heritage,"Great Fortitude","Lightning Reflexes","Alertness","Shield Block","Anathema","Druidic Language","Darkvision","Stealth","Survival","Arcana","Will","Fortitude","Signature Spells","Low-Light Vision","Powerful Fist","Mystic Strikes","Incredible Movement","Claws","Wild Empathy","Aquatic Adaptation","Resolve","Expert Spellcaster","Master Spellcaster","Legendary Spellcaster"];arraySpecials=arraySpecials.filter(val=>!blacklist.includes(val));jsonBuild.specials=arraySpecials;if(addFeats){finishedAncestryFeatures=true;finishedClassFeatures=true;addFeatItems(targetActor,arrayFeats);addFeatItems(targetActor,arraySpecials);addActionItems(targetActor,arraySpecials);addAncestryFeatureItems(targetActor,arraySpecials);addClassFeatureItems(targetActor,arraySpecials);}else{finishedFeats=true;finishedAncestryFeatures=true;finishedActions=true;finishedClassFeatures=true;checkAllFinishedAndCreate(targetActor);}
 if(addEquipment){let pack=game.packs.get('pf2e.equipment-srd');let content=await game.packs.get('pf2e.equipment-srd').getDocuments();let backpackData=await pack.getDocuments('3lgwjrFEsQVKzhh7');let backpackInstance=[];let arrayKit=[];if(hasAdventurersPack(arrayEquipment)){backpackInstance=await targetActor.createEmbeddedDocuments("Item",backpackData);arrayKit.push(["bedroll",1]);arrayKit.push(["chalk",10]);arrayKit.push(["flint-and-steel",1]);arrayKit.push(["rope",1]);arrayKit.push(["rations",14]);arrayKit.push(["torch",5]);arrayKit.push(["waterskin",1]);}
@@ -174,7 +176,9 @@ function needsNewInstanceofItem(targetActor,itemName){for(var ref in targetActor
 return true;}
 function getSizeValue(size){switch(size){case 0:return"tiny";case 1:return"sm";case 3:return"lg";}
 return"med";}
-async function setSpellcasters(targetActor,arraySpellcasters,deleteAll){if(deleteAll){let items=targetActor.data.items.filter(i=>i.type==="spellcastingEntry");let deletions=items.map(i=>i.id);let updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
+async function setSpellcasters(targetActor,arraySpellcasters,deleteAll){if(deleteAll){if(fbpiDebug)
+console.log("Deleting all spells")
+let items=targetActor.data.items.filter(i=>i.type==="spellcastingEntry");let deletions=items.map(i=>i.id);let updated=await targetActor.deleteEmbeddedDocuments("Item",deletions);}
 let requiredSpells=[];for(var ref in arraySpellcasters){if(arraySpellcasters.hasOwnProperty(ref)){let spellCaster=arraySpellcasters[ref];spellCaster.instance=await addSpecificCasterAndSpells(targetActor,spellCaster,spellCaster.magicTradition,spellCaster.spellcastingType);for(var ref in spellCaster.spells){if(spellCaster.spells.hasOwnProperty(ref)){let spellListObject=spellCaster.spells[ref];requiredSpells=requiredSpells.concat(spellListObject.list);}}}}
 game.packs.filter(pack=>pack.metadata.name==='spells-srd').forEach(async(pack)=>{const content=await pack.getDocuments();for(const action of content.filter(item=>spellIsRequired(item,requiredSpells))){arraySpellcasters.forEach(spellCaster=>{for(var ref in spellCaster.spells){if(spellCaster.spells.hasOwnProperty(ref)){let spellListObject=spellCaster.spells[ref];for(var ref in spellListObject.list){if(spellListObject.list.hasOwnProperty(ref)){if(getSlug(spellListObject.list[ref])==action.data.data.slug){const clonedData=JSON.parse(JSON.stringify(action.data));clonedData.data.location.value=spellCaster.instance[0].id;clonedData.data.level.value=spellListObject.spellLevel;allItems.push(clonedData);break;}}}}}});}
 finishedSpells=true;checkAllFinishedAndCreate(targetActor);});}
@@ -190,7 +194,7 @@ function checkAllFinishedAndCreate(targetActor){if(finishedFeats&&finishedEquipm
 console.log("did not add "+item[0]);}}}}
 if(addFeats){for(var ref in jsonBuild.feats){if(jsonBuild.feats.hasOwnProperty(ref)){var item=jsonBuild.feats[ref];if(!addedItems.includes(item[0])){notAddedCount++;warning+="<li>Feat: "+item[0]+"</li>";if(fbpiDebug)
 console.log("did not add "+item[0]);}}}
-for(var ref in jsonBuild.specials){if(jsonBuild.specials.hasOwnProperty(ref)){var item=jsonBuild.specials[ref];if(!addedItems.includes(item)){notAddedCount++;warning+="<li>Special: "+item+"</li>";if(fbpiDebug)
+targetActor.update({'flags.exportSource.world':game.world.id,'flags.exportSource.system':game.system.id,'flags.exportSource.systemVersion':game.system.data.version,'flags.exportSource.coreVersion':game.data.version});for(var ref in jsonBuild.specials){if(jsonBuild.specials.hasOwnProperty(ref)){var item=jsonBuild.specials[ref];if(!addedItems.includes(item)){notAddedCount++;warning+="<li>Special: "+item+"</li>";if(fbpiDebug)
 console.log("did not add "+item);}}}}
 warning+="</ul><br>";if(notAddedCount>0){ui.notifications.warn("Import completed with some warnings.");new Dialog({title:`Pathbuilder Import Warning`,content:warning,buttons:{yes:{icon:"<i class='fas fa-check'></i>",label:`Finished`},},default:"yes",close:html=>{if(heroVaultExport){let heroJSON=JSON.stringify(targetActor.data);if(fbpiDebug)
 console.log(heroJSON);doHVExport(heroJSON,targetActor);}}}).render(true);}else{ui.notifications.info("Import completed successfully.");if(heroVaultExport){let heroJSON=JSON.stringify(targetActor.data);if(fbpiDebug)
