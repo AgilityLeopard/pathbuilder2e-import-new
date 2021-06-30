@@ -1,5 +1,5 @@
 const fbpiDebug=true;
-const fpbi="0.3.3";
+const fpbi="0.3.4";
 
 var applyChanges = false;
 var finishedFeats = false;
