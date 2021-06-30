@@ -1,3 +1,7 @@
+## 0.3.4 (Jun 30, 2021)
+
+* revert previous change
+
 ## 0.3.3 (Jun 30, 2021)
 
 * change relative paths to absolute for imports
