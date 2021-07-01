@@ -1,5 +1,5 @@
 const fbpiDebug=true;
-const fpbi="0.3.4";
+const fpbi="0.4.0";
 
 const pbcolor1='color: #7bf542';  //bright green
 const pbcolor2='color: #d8eb34'; //yellow green
