@@ -1,6 +1,13 @@
 const fbpiDebug=true;
 const fpbi="0.3.4";
 
+const pbcolor1='color: #7bf542';  //bright green
+const pbcolor2='color: #d8eb34'; //yellow green
+const pbcolor3='color: #ffffff'; //white
+const pbcolor4='color: #cccccc'; //gray
+const pbcolor5='color: #ff0000'; //red
+
+
 var applyChanges = false;
 var finishedFeats = false;
 var finishedActions = false;
@@ -19,38 +26,28 @@ var heroVaultExport=false;
 var allItems=[];
 var jsonBuild=[];
 var addedItems=[];
-let isHV=false;
-
-async function doHV() {
-  if (game.modules.get('herovaultfoundry')?.active){
-    let {supportCheck} = await import('../herovaultfoundry/herovault-min.js');
-    if (typeof supportCheck !== "undefined")
-      isHV=supportCheck();
-    if (fbpiDebug)
-      console.log("is hv?: "+isHV);
-  }
-}
+var pbButton=true;
 
 async function doHVExport(hero,act) {
-  if (game.modules.get('herovaultfoundry')?.active){
-    let {exportToHVFromPBHLO} = await import('../herovaultfoundry/herovault-min.js');
-    if (typeof exportToHVFromPBHLO !== "undefined") {
-      exportToHVFromPBHLO(hero,act);
-    }
-  }
+  game.modules.get('herovaultfoundry')?.api?.exportToHVFromPBHLO(hero,act);
   return
 }
 
+Hooks.on('herovaultfoundryReady', (api) => {
+  if (fbpiDebug)
+    console.log("%cPathbuilder2e Import | %cDisabling pathbuilder button since herovault is loaded",pbcolor1,pbcolor4);
+  pbButton=false;
+});
+
 Hooks.on('renderActorSheet', async function(obj, html){
-  await doHV();
   // Only inject the link if the actor is of type "character" and the user has permission to update it
   const actor = obj.actor;
   if (!(actor.data.type === "character")){ return;}
   if (actor.canUserModify(game.user, "update")==false){ return;}
 
-  let element = html.find(".window-header .window-title");
-  if (element.length != 1) return;
-  if (isHV==false) {
+  if (pbButton) {
+    let element = html.find(".window-header .window-title");
+    if (element.length != 1) return;
     let button = $(`<a class="popout" style><i class="fas fa-book"></i>Import from Pathbuilder 2e</a>`);
     button.on('click', () => beginPathbuilderImport(obj.object));
     element.after(button);
@@ -163,7 +160,7 @@ export async function beginPathbuilderImport(targetActor,isHV=false){
         if (isHV)
           heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked;
         if (fbpiDebug)
-          console.log("Got heroVaultExport:" + heroVaultExport);
+          console.log("%cPathbuilder2e Import | %cGot heroVaultExport:" + heroVaultExport,pbcolor1,pbcolor4);
         fetchPathbuilderBuild(targetActor, buildID);
       }
     }
@@ -248,12 +245,12 @@ async function importCharacter(targetActor, jsonBuild){
     // console.log(deletions)
     // const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
     if (fbpiDebug)
-      console.log("Deleting all items")
+      console.log("%cPathbuilder2e Import | %cDeleting all items",pbcolor1,pbcolor4)
     let deletions = targetActor.data.items.map(i => i.id);
     let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
   } else if (addMoney){
     if (fbpiDebug)
-      console.log("Deleting money")
+      console.log("%cPathbuilder2e Import | %cDeleting money",pbcolor1,pbcolor4)
     let items = targetActor.data.items.filter(i => i.name === "Platinum Pieces" || i.name === "Gold Pieces" || i.name === "Silver Pieces" || i.name === "Copper Pieces");
     let deletions = items.map(i => i.id);
     let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
@@ -380,7 +377,7 @@ async function importCharacter(targetActor, jsonBuild){
   if (targetActor.data.data.details.background==null ||targetActor.data.data.details.background.value !=jsonBuild.background) {
     if (deleteAll){
       if (fbpiDebug)
-        console.log("Deleting background");
+        console.log("%cPathbuilder2e Import | %cDeleting background",pbcolor1,pbcolor4);
       const items = targetActor.data.items.filter(i => i.type === "background");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
@@ -397,7 +394,7 @@ async function importCharacter(targetActor, jsonBuild){
   if (targetActor.data.data.details.ancestry!=jsonBuild.ancestry){
     if (deleteAll){
       if (fbpiDebug)
-        console.log("deleting ancestry");
+        console.log("%cPathbuilder2e Import | %cdeleting ancestry",pbcolor1,pbcolor4);
       const items = targetActor.data.items.filter(i => i.type === "ancestry");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
@@ -414,7 +411,7 @@ async function importCharacter(targetActor, jsonBuild){
   if (targetActor.data.data.details.class!=jsonBuild.class){
     if (deleteAll){
       if (fbpiDebug)
-        console.log("Deleting class")
+        console.log("%cPathbuilder2e Import | %cDeleting class",pbcolor1,pbcolor4)
       const items = targetActor.data.items.filter(i => i.type === "class");
       const deletions = items.map(i => i.id);
       const updated = await targetActor.deleteEmbeddedDocuments("Item", deletions); // Deletes multiple EmbeddedEntity objects
@@ -427,7 +424,7 @@ async function importCharacter(targetActor, jsonBuild){
     }
   }
   //clean up some specials that are handled by Foundry:
-  const blacklist=[jsonBuild.heritage,"Great Fortitude", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema","Druidic Language","Darkvision","Stealth", "Survival", "Arcana", "Will", "Fortitude", "Signature Spells","Low-Light Vision","Powerful Fist", "Mystic Strikes","Incredible Movement","Claws","Wild Empathy","Aquatic Adaptation","Resolve","Expert Spellcaster","Master Spellcaster", "Legendary Spellcaster"];
+  const blacklist=[jsonBuild.heritage,"Great Fortitude","Intimidation","Axe", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema","Druidic Language","Darkvision","Stealth", "Survival", "Arcana", "Will", "Fortitude", "Signature Spells","Low-Light Vision","Powerful Fist", "Mystic Strikes","Incredible Movement","Claws","Wild Empathy","Aquatic Adaptation","Resolve","Expert Spellcaster","Master Spellcaster", "Legendary Spellcaster"];
   arraySpecials = arraySpecials.filter(val => !blacklist.includes(val));
   jsonBuild.specials=arraySpecials;
   // console.log(arraySpecials);
@@ -436,15 +433,15 @@ async function importCharacter(targetActor, jsonBuild){
 
     finishedAncestryFeatures=true;
     finishedClassFeatures=true;
-    // console.log("doing feat items")
+    // console.log("%cPathbuilder2e Import | %cdoing feat items",pbcolor1,pbcolor4)
     addFeatItems(targetActor, arrayFeats);
-    // console.log("doing feat items on specials")
+    // console.log("%cPathbuilder2e Import | %cdoing feat items on specials",pbcolor1,pbcolor4)
     addFeatItems(targetActor, arraySpecials);
-    // console.log("doing AncestryFeaturefeat items on feats")
+    // console.log("%cPathbuilder2e Import | %cdoing AncestryFeaturefeat items on feats",pbcolor1,pbcolor4)
     // addAncestryFeatureFeatItems(targetActor, arrayFeats);
-    // console.log("doing AncestryFeaturefeat items on specials")
+    // console.log("%cPathbuilder2e Import | %cdoing AncestryFeaturefeat items on specials",pbcolor1,pbcolor4)
     // addAncestryFeatureFeatItems(targetActor, arraySpecials);
-    // console.log("doing action items")
+    // console.log("%cPathbuilder2e Import | %cdoing action items",pbcolor1,pbcolor4)
     addActionItems(targetActor, arraySpecials);
     addAncestryFeatureItems(targetActor, arraySpecials);
     // most class features should be handled by Foundry
@@ -588,7 +585,7 @@ async function importCharacter(targetActor, jsonBuild){
               clonedData.data.preciousMaterialGrade.value = getMaterialGrade(weaponDetails.mat);
             }
             if (weaponDetails.display){
-              // console.log("display name: "+weaponDetails.display)
+              // console.log("%cPathbuilder2e Import | %cdisplay name: "+weaponDetails.display,pbcolor1,pbcolor4)
               clonedData.name = weaponDetails.display;
             }
             allItems.push(clonedData);
@@ -794,7 +791,7 @@ async function addFeatItems(targetActor, arrayFeats){
 }
 
 function isNameMatch(pathbuilderItemName, foundryItemSlug){
-  // console.log("comparing "+getSlug(pathbuilderItemName) +" and noquote "+getSlugNoQuote(pathbuilderItemName) + " and class "+getSlug(getClassAdjustedSpecialNameLowerCase(pathbuilderItemName))+" AND ancestry "+ getSlug(getAncestryAdjustedSpecialNameLowerCase(pathbuilderItemName))+" AND heritage: "+ getSlug(getHeritageAdjustedSpecialNameLowerCase(pathbuilderItemName))+" to "+foundryItemSlug);
+  // console.log("%cPathbuilder2e Import | %ccomparing "+getSlug(pathbuilderItemName) +" and noquote "+getSlugNoQuote(pathbuilderItemName) + " and class "+getSlug(getClassAdjustedSpecialNameLowerCase(pathbuilderItemName))+" AND ancestry "+ getSlug(getAncestryAdjustedSpecialNameLowerCase(pathbuilderItemName))+" AND heritage: "+ getSlug(getHeritageAdjustedSpecialNameLowerCase(pathbuilderItemName))+" to "+foundryItemSlug,pbcolor1,pbcolor4);
   if (getSlug(pathbuilderItemName)==foundryItemSlug)return true;
   if (getSlugNoQuote(pathbuilderItemName)==foundryItemSlug)return true;
   if (getSlug(getClassAdjustedSpecialNameLowerCase(pathbuilderItemName)) == foundryItemSlug) return true;
@@ -991,7 +988,7 @@ async function setSpellcasters(targetActor, arraySpellcasters, deleteAll){
   // delete existing spellcasters and spells if not already deleted || i.type === "spell"
   if (deleteAll){
     if (fbpiDebug)
-        console.log("Deleting all spells")
+        console.log("%cPathbuilder2e Import | %cDeleting all spells",pbcolor1,pbcolor4)
     let items = targetActor.data.items.filter(i => i.type === "spellcastingEntry");
     let deletions = items.map(i => i.id);
     let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
@@ -1213,7 +1210,7 @@ function checkAllFinishedAndCreate(targetActor){
               notAddedCount++;
               warning+="<li>Equipment: "+item[0]+"</li>";
               if (fbpiDebug)
-                console.log("did not add "+item[0]);
+                console.log("%cPathbuilder2e Import | %cdid not add "+item[0],pbcolor1,pbcolor4);
             }
           }
         }
@@ -1226,7 +1223,7 @@ function checkAllFinishedAndCreate(targetActor){
               notAddedCount++;
               warning+="<li>Feat: "+item[0]+"</li>";
               if (fbpiDebug)
-                console.log("did not add "+item[0]);
+                console.log("%cPathbuilder2e Import | %cdid not add "+item[0],pbcolor1,pbcolor4);
             }
           }
         }
@@ -1243,7 +1240,7 @@ function checkAllFinishedAndCreate(targetActor){
               notAddedCount++;
               warning+="<li>Special: "+item+"</li>";
               if (fbpiDebug)
-                console.log("did not add "+item);
+                console.log("%cPathbuilder2e Import | %cdid not add "+item,pbcolor1,pbcolor4);
             }
           }
         }
@@ -1291,6 +1288,7 @@ function getSlug(itemName){
     .trim()
     .replace(/\s+|-{2,}/g, '-');
 }
+
 function getSlugNoQuote(itemName){
   return itemName.toString().toLowerCase()
     .replace(/[\']+/gi, '')
@@ -1301,7 +1299,7 @@ function getSlugNoQuote(itemName){
 
 function mapItemToFoundryName(itemName) {
   if (fbpiDebug)
-    console.log("Checking map for '"+itemName+"'")
+    console.log("%cPathbuilder2e Import | %cChecking map for '"+itemName+"'",pbcolor1,pbcolor4)
   const changeNames=[{'name':'Chain','newname':'Chain (10 feet)'}]
   const newNameIdx = changeNames.findIndex(function(item) {return item.name==itemName});
   // if (newNameIdx>-1) console.log(changeNames[newNameIdx]['newname']);
@@ -1310,22 +1308,29 @@ function mapItemToFoundryName(itemName) {
 
 function mapSpecialToFoundryName(itemName) {
   if (fbpiDebug)
-    console.log("Checking map for '"+itemName+"'")
-  const changeNames=[{'name':'Maestro','newname':'Maestro Muse'},{"name": "Duelist Dedication (LO)", "newname": "Aldori Duelist Dedication"}, {"name": "Parry", "newname": "Aldori Parry"}, {"name": "Riposte", "newname": "Aldori Riposte"}, {"name": "Sentry Dedication", "newname": "Lastwall Sentry Dedication"}, {"name": "Wary Eye", "newname": "Eye of Ozem"}, {"name": "Warden", "newname": "Lastwall Warden"}, {"name": "Heavenseeker Dedication", "newname": "Jalmeri Heavenseeker Dedication"}, {"name": "Mantis God's Grip", "newname": "Achaekek's Grip"}, {"name": "High Killer Training", "newname": "Vernai Training"}, {"name": "Guild Agent Dedication", "newname": "Pathfinder Agent Dedication"}, {"name": "Wayfinder Resonance Infiltrator", "newname": "Westyr's Wayfinder Repository"}, {"name": "Collegiate Attendant Dedication", "newname": "Magaambyan Attendant Dedication"}, {"name": "Scholarly Storytelling", "newname": "Uzunjati Storytelling"}, {"name": "Scholarly Recollection", "newname": "Uzunjati Recollection"}, {"name": "Secret Lesson", "newname": "Janatimo's Lessons"}, {"name": "Lumberjack Dedication", "newname": "Turpin Rowe Lumberjack Dedication"}, {"name": "Fourberie", "newname": "Fane's Fourberie"}, {"name": "Escape", "newname": "Fane's Escape"}, {"name": "Stab and Snag", "newname": "Stella's Stab and Snag"}, {"name":"Cognitive Crossover", "newname":"Kreighton's Cognitive Crossover"}]
+    console.log("%cPathbuilder2e Import | %cChecking map for '"+itemName+"'",pbcolor1,pbcolor4)
+  const changeNames=[{'name':'Deflect Arrows','newname':'Deflect Arrow'},{'name':'Maestro','newname':'Maestro Muse'},{"name": "Duelist Dedication (LO)", "newname": "Aldori Duelist Dedication"}, {"name": "Parry", "newname": "Aldori Parry"}, {"name": "Riposte", "newname": "Aldori Riposte"}, {"name": "Sentry Dedication", "newname": "Lastwall Sentry Dedication"}, {"name": "Wary Eye", "newname": "Eye of Ozem"}, {"name": "Warden", "newname": "Lastwall Warden"}, {"name": "Heavenseeker Dedication", "newname": "Jalmeri Heavenseeker Dedication"}, {"name": "Mantis God's Grip", "newname": "Achaekek's Grip"}, {"name": "High Killer Training", "newname": "Vernai Training"}, {"name": "Guild Agent Dedication", "newname": "Pathfinder Agent Dedication"}, {"name": "Wayfinder Resonance Infiltrator", "newname": "Westyr's Wayfinder Repository"}, {"name": "Collegiate Attendant Dedication", "newname": "Magaambyan Attendant Dedication"}, {"name": "Scholarly Storytelling", "newname": "Uzunjati Storytelling"}, {"name": "Scholarly Recollection", "newname": "Uzunjati Recollection"}, {"name": "Secret Lesson", "newname": "Janatimo's Lessons"}, {"name": "Lumberjack Dedication", "newname": "Turpin Rowe Lumberjack Dedication"}, {"name": "Fourberie", "newname": "Fane's Fourberie"}, {"name": "Escape", "newname": "Fane's Escape"}, {"name": "Stab and Snag", "newname": "Stella's Stab and Snag"}, {"name":"Cognitive Crossover", "newname":"Kreighton's Cognitive Crossover"}]
   const newNameIdx = changeNames.findIndex(function(item) {return item.name==itemName});
   // if (newNameIdx>-1) console.log(changeNames[newNameIdx]['newname']);
   return (newNameIdx >-1) ? changeNames[newNameIdx]['newname'] : itemName;
 }
 
 function getFoundryFeatLocation(pathbuilderFeatType, pathbuilderFeatLevel){
-  if (pathbuilderFeatType=="Ancestry Feat"){
+  if (pathbuilderFeatType=="Ancestry Feat") {
     return "ancestry-"+pathbuilderFeatLevel;
-  } else if (pathbuilderFeatType=="Class Feat"){
+  } else if (pathbuilderFeatType=="Class Feat") {
     return "class-"+pathbuilderFeatLevel;
-  } else if (pathbuilderFeatType=="Skill Feat"){
+  } else if (pathbuilderFeatType=="Skill Feat") {
     return "skill-"+pathbuilderFeatLevel;
-  } else if (pathbuilderFeatType=="General Feat"){
+  } else if (pathbuilderFeatType=="General Feat") {
     return "general-"+pathbuilderFeatLevel;
   }
   return null;
 }
+
+Hooks.on('init', () => {
+    game.modules.get('pathbuilder2e-import').api = {
+    beginPathbuilderImport: beginPathbuilderImport
+  };
+  Hooks.callAll('pathbuilder2eimportReady', game.modules.get('pathbuilder2e-import').api);
+});

@@ -1,3 +1,9 @@
+## 0.4.0 (Jun 30, 2021)
+
+* rewrote the connectors between pathbuilder and herovault to use native api calls instead of janky crap
+* changed debug output to match my other modules debug style
+* added a few mappings and blacklist items
+
 ## 0.3.4 (Jun 30, 2021)
 
 * revert previous change
