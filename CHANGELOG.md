@@ -1,3 +1,11 @@
+## 0.5.0 (Jul 3, 2021)
+
+* fixed missing class features. some might be doubled and should be cleaned up by hand for now.
+* added a reporting feature that auto-reports errors/warnings for missed items
+* added more mappings and blacklist items
+* fixed errors caused by spellcastingEntry being deleted but spells were not
+* added config options for toggling debug and reporting feature
+
 ## 0.4.0 (Jun 30, 2021)
 
 * rewrote the connectors between pathbuilder and herovault to use native api calls instead of janky crap

@@ -1,5 +1,6 @@
-const fbpiDebug = true;
+var fbpiDebug = false;
 const fpbi = "0.4.0";
+const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
 const pbcolor2 = "color: #d8eb34"; //yellow green
@@ -21,7 +22,8 @@ var addMoney = false;
 var addSpellcasters = false;
 var deleteAll = false;
 var heroVaultExport = false;
-
+var reportMissedItems = false;
+var buildID;
 var allItems = [];
 var jsonBuild = [];
 var addedItems = [];
@@ -157,7 +159,7 @@ export async function beginPathbuilderImport(targetActor, isHV = false) {
     default: "yes",
     close: (html) => {
       if (applyChanges) {
-        let buildID = html.find('[id="textBoxBuildID"]')[0].value;
+        buildID = html.find('[id="textBoxBuildID"]')[0].value;
         if (!isNormalInteger(buildID)) {
           ui.notifications.warn("Build ID must be a positive integer!");
           return;
@@ -274,8 +276,11 @@ async function importCharacter(targetActor, jsonBuild) {
         pbcolor1,
         pbcolor4
       );
-    let deletions = targetActor.data.items.map((i) => i.id);
-    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
+    // let deletions = targetActor.data.items.map((i) => i.id);
+    // let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
+    let updated = await targetActor.deleteEmbeddedDocuments("Item", ["123"], {
+      deleteAll: true,
+    });
   } else if (addMoney) {
     if (fbpiDebug)
       console.log(
@@ -359,7 +364,8 @@ async function importCharacter(targetActor, jsonBuild) {
     jsonBuild.attributes.classhp * jsonBuild.level +
     jsonBuild.attributes.ancestryhp +
     conBonus * jsonBuild.level;
-  targetActor.update({
+
+  await targetActor.update({
     name: jsonBuild.name,
     "data.details.level.value": jsonBuild.level,
     "data.details.heritage.value": jsonBuild.heritage,
@@ -377,12 +383,6 @@ async function importCharacter(targetActor, jsonBuild) {
     "data.abilities.int.value": jsonBuild.abilities.int,
     "data.abilities.wis.value": jsonBuild.abilities.wis,
     "data.abilities.cha.value": jsonBuild.abilities.cha,
-
-    "data.attributes.ancestryhp": jsonBuild.attributes.ancestryhp,
-    "data.attributes.classhp": jsonBuild.attributes.classhp,
-    "data.attributes.speed.value": jsonBuild.attributes.speed,
-    "data.attributes.flatbonushp": jsonBuild.attributes.bonushp,
-    "data.attributes.hp.value": currentHP,
 
     "data.saves.fortitude.rank": jsonBuild.proficiencies.fortitude / 2,
     "data.saves.reflex.rank": jsonBuild.proficiencies.reflex / 2,
@@ -421,7 +421,7 @@ async function importCharacter(targetActor, jsonBuild) {
     targetActor.data.data.details.background == null ||
     targetActor.data.data.details.background.value != jsonBuild.background
   ) {
-    if (deleteAll) {
+    /* if (deleteAll) {
       if (fbpiDebug)
         console.log(
           "%cPathbuilder2e Import | %cDeleting background",
@@ -436,7 +436,7 @@ async function importCharacter(targetActor, jsonBuild) {
         "Item",
         deletions
       ); // Deletes multiple EmbeddedEntity objects
-    }
+    } */
     let packBackground = await game.packs
       .get("pf2e.backgrounds")
       .getDocuments();
@@ -446,34 +446,10 @@ async function importCharacter(targetActor, jsonBuild) {
       }
     }
   }
-
-  // // //ancestry
-  if (targetActor.data.data.details.ancestry != jsonBuild.ancestry) {
-    if (deleteAll) {
-      if (fbpiDebug)
-        console.log(
-          "%cPathbuilder2e Import | %cdeleting ancestry",
-          pbcolor1,
-          pbcolor4
-        );
-      const items = targetActor.data.items.filter((i) => i.type === "ancestry");
-      const deletions = items.map((i) => i.id);
-      const updated = await targetActor.deleteEmbeddedDocuments(
-        "Item",
-        deletions
-      ); // Deletes multiple EmbeddedEntity objects
-    }
-    let packAncestry = await game.packs.get("pf2e.ancestries").getDocuments();
-    for (const item of packAncestry) {
-      if (item.data.data.slug == getSlug(jsonBuild.ancestry)) {
-        allItems.push(item.data);
-      }
-    }
-  }
-
+  let classFeatures = [];
   // //class
   if (targetActor.data.data.details.class != jsonBuild.class) {
-    if (deleteAll) {
+    /* if (deleteAll) {
       if (fbpiDebug)
         console.log(
           "%cPathbuilder2e Import | %cDeleting class",
@@ -486,16 +462,64 @@ async function importCharacter(targetActor, jsonBuild) {
         "Item",
         deletions
       ); // Deletes multiple EmbeddedEntity objects
-    }
+    } */
+    if (fbpiDebug)
+      console.log(
+        "%cPathbuilder2e Import | %cSetting class to: " + jsonBuild.class,
+        pbcolor1,
+        pbcolor4
+      );
     let packClasses = await game.packs.get("pf2e.classes").getDocuments();
+
     for (const item of packClasses) {
       if (item.data.data.slug == getSlug(jsonBuild.class)) {
+        await targetActor.createEmbeddedDocuments("Item", [item.data]);
+        // console.log(item.data.data.items);
+        for (const classFeatureItem in item.data.data.items) {
+          // console.log("Class feature:");
+          // console.log(classFeatureItem);
+          // console.log(
+          //   `jsonBuild.level ${jsonBuild.level} >= classFeatureItem.level ${item.data.data.items[classFeatureItem].level}? `
+          // );
+          if (jsonBuild.level >= item.data.data.items[classFeatureItem].level) {
+            let newFeature = {
+              id: item.data.data.items[classFeatureItem].id,
+              pack: item.data.data.items[classFeatureItem].pack,
+              name: item.data.data.items[classFeatureItem].name,
+            };
+            classFeatures.push(newFeature);
+          }
+        }
+      }
+    }
+  }
+
+  // // //ancestry
+  if (targetActor.data.data.details.ancestry != jsonBuild.ancestry) {
+    /* if (deleteAll) {
+      if (fbpiDebug)
+        console.log(
+          "%cPathbuilder2e Import | %cdeleting ancestry",
+          pbcolor1,
+          pbcolor4
+        );
+      const items = targetActor.data.items.filter((i) => i.type === "ancestry");
+      const deletions = items.map((i) => i.id);
+      const updated = await targetActor.deleteEmbeddedDocuments(
+        "Item",
+        deletions
+      ); // Deletes multiple EmbeddedEntity objects
+    } */
+    let packAncestry = await game.packs.get("pf2e.ancestries").getDocuments();
+    for (const item of packAncestry) {
+      if (item.data.data.slug == getSlug(jsonBuild.ancestry)) {
         allItems.push(item.data);
       }
     }
   }
+
   //clean up some specials that are handled by Foundry:
-  const blacklist = [
+  let blacklist = [
     jsonBuild.heritage,
     "Great Fortitude",
     "Intimidation",
@@ -507,6 +531,7 @@ async function importCharacter(targetActor, jsonBuild) {
     "Druidic Language",
     "Darkvision",
     "Stealth",
+    "Shield",
     "Survival",
     "Arcana",
     "Will",
@@ -523,9 +548,20 @@ async function importCharacter(targetActor, jsonBuild) {
     "Expert Spellcaster",
     "Master Spellcaster",
     "Legendary Spellcaster",
+    "Weapon Specialization",
+    "Mighty Rage",
+    "Deny Advantage",
+    "Critical Brutality",
+    "Juggernaut",
+    "Medium Armor Expertise",
+    "Weapon Specialization (Barbarian)",
   ];
+  for (const cf in classFeatures) {
+    blacklist.push(classFeatures[cf].name);
+  }
   arraySpecials = arraySpecials.filter((val) => !blacklist.includes(val));
-  jsonBuild.specials = arraySpecials;
+  jsonBuild.specials = uniq(arraySpecials);
+  // console.log("SPECIALS ARRAY:");
   // console.log(arraySpecials);
 
   if (addFeats) {
@@ -542,8 +578,7 @@ async function importCharacter(targetActor, jsonBuild) {
     // console.log("%cPathbuilder2e Import | %cdoing action items",pbcolor1,pbcolor4)
     addActionItems(targetActor, arraySpecials);
     addAncestryFeatureItems(targetActor, arraySpecials);
-    // most class features should be handled by Foundry
-    addClassFeatureItems(targetActor, arraySpecials);
+    addClassFeatureItems(targetActor, arraySpecials, classFeatures);
   } else {
     finishedFeats = true;
     finishedAncestryFeatures = true;
@@ -803,7 +838,7 @@ async function importCharacter(targetActor, jsonBuild) {
     checkAllFinishedAndCreate(targetActor);
   }
   if (addSpellcasters) {
-    setSpellcasters(targetActor, jsonBuild.spellCasters, deleteAll);
+    setSpellcasters(targetActor, jsonBuild.spellCasters);
   } else {
     finishedSpells = true;
     checkAllFinishedAndCreate(targetActor);
@@ -1035,7 +1070,7 @@ async function addAncestryFeatureFeatItems(targetActor, arraySpecials) {
   checkAllFinishedAndCreate(targetActor);
 }
 
-async function addClassFeatureItems(targetActor, arraySpecials) {
+async function addClassFeatureItems(targetActor, arraySpecials, arrayCF) {
   let content = await game.packs.get("pf2e.classfeatures").getDocuments();
   for (const action of content.filter((item) =>
     specialIsRequired(item, arraySpecials)
@@ -1050,6 +1085,21 @@ async function addClassFeatureItems(targetActor, arraySpecials) {
           addedItems.push(itemName);
           allItems.push(action.data);
         }
+      }
+    }
+  }
+  let classFeatures = arrayCF.map((a) => a.name);
+  for (const action of content.filter((item) =>
+    specialIsRequired(item, classFeatures)
+  )) {
+    for (var ref in classFeatures) {
+      var itemName = classFeatures[ref];
+      if (
+        isNameMatch(itemName, action.data.data.slug) &&
+        needsNewInstanceofItem(targetActor, itemName)
+      ) {
+        addedItems.push(itemName);
+        allItems.push(action.data);
       }
     }
   }
@@ -1221,21 +1271,20 @@ function getSizeValue(size) {
 }
 
 /// spells
-async function setSpellcasters(targetActor, arraySpellcasters, deleteAll) {
+async function setSpellcasters(targetActor, arraySpellcasters) {
   // delete existing spellcasters and spells if not already deleted || i.type === "spell"
-  if (deleteAll) {
-    if (fbpiDebug)
-      console.log(
-        "%cPathbuilder2e Import | %cDeleting all spells",
-        pbcolor1,
-        pbcolor4
-      );
-    let items = targetActor.data.items.filter(
-      (i) => i.type === "spellcastingEntry"
+  if (fbpiDebug)
+    console.log(
+      "%cPathbuilder2e Import | %cDeleting all spells",
+      pbcolor1,
+      pbcolor4
     );
-    let deletions = items.map((i) => i.id);
-    let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
-  }
+  let items = targetActor.data.items.filter((i) => i.type === "spell");
+  let deletions = items.map((i) => i.id);
+  let updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
+  items = targetActor.data.items.filter((i) => i.type === "spellcastingEntry");
+  deletions = items.map((i) => i.id);
+  updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
   // make array of spellcaster instances. put
   let requiredSpells = [];
   for (var ref in arraySpellcasters) {
@@ -1472,6 +1521,7 @@ function checkAllFinishedAndCreate(targetActor) {
     let finished = targetActor.createEmbeddedDocuments("Item", allItems);
     if (finished) {
       let notAddedCount = 0;
+      let warningList = "";
       let warning =
         "<p>The following items could not be added. They may have already have been added in a previous import or cannot be matched to a foundry item. You may be able to find them with a manual search.</p><ul>";
       if (addEquipment) {
@@ -1481,6 +1531,7 @@ function checkAllFinishedAndCreate(targetActor) {
             if (!item.added) {
               notAddedCount++;
               warning += "<li>Equipment: " + item[0] + "</li>";
+              warningList += "Equipment: " + item[0] + "|";
               if (fbpiDebug)
                 console.log(
                   "%cPathbuilder2e Import | %cdid not add " + item[0],
@@ -1498,6 +1549,7 @@ function checkAllFinishedAndCreate(targetActor) {
             if (!addedItems.includes(item[0])) {
               notAddedCount++;
               warning += "<li>Feat: " + item[0] + "</li>";
+              warningList += "Feat: " + item[0] + "|";
               if (fbpiDebug)
                 console.log(
                   "%cPathbuilder2e Import | %cdid not add " + item[0],
@@ -1519,6 +1571,7 @@ function checkAllFinishedAndCreate(targetActor) {
             if (!addedItems.includes(item)) {
               notAddedCount++;
               warning += "<li>Special: " + item + "</li>";
+              warningList += "Special: " + item + "|";
               if (fbpiDebug)
                 console.log(
                   "%cPathbuilder2e Import | %cdid not add " + item,
@@ -1531,6 +1584,7 @@ function checkAllFinishedAndCreate(targetActor) {
       }
 
       warning += "</ul><br>";
+      if (reportMissedItems) reportWarnings(warningList);
 
       if (notAddedCount > 0) {
         ui.notifications.warn("Import completed with some warnings.");
@@ -1564,6 +1618,14 @@ function checkAllFinishedAndCreate(targetActor) {
   }
 }
 
+function reportWarnings(warnings) {
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open("POST", reportDomain + "/pbreport.php", true);
+  xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xmlhttp.send(
+    "buildID=" + buildID + "&warnings=" + encodeURIComponent(warnings)
+  );
+}
 function getSlug(itemName) {
   return itemName
     .toString()
@@ -1608,6 +1670,7 @@ function mapSpecialToFoundryName(itemName) {
   const changeNames = [
     { name: "Deflect Arrows", newname: "Deflect Arrow" },
     { name: "Maestro", newname: "Maestro Muse" },
+    { name: "Ape", newname: "Ape Animal Instinct" },
     { name: "Duelist Dedication (LO)", newname: "Aldori Duelist Dedication" },
     { name: "Parry", newname: "Aldori Parry" },
     { name: "Riposte", newname: "Aldori Riposte" },
@@ -1637,7 +1700,13 @@ function mapSpecialToFoundryName(itemName) {
       newname: "Turpin Rowe Lumberjack Dedication",
     },
     { name: "Fourberie", newname: "Fane's Fourberie" },
+    {
+      name: "Incredible Beastmaster's Companion",
+      newname: "Incredible Beastmaster Companion",
+    },
+    { name: "Polymath", newname: "Polymath Muse" },
     { name: "Escape", newname: "Fane's Escape" },
+    { name: "Quick Climber", newname: "Quick Climb" },
     { name: "Stab and Snag", newname: "Stella's Stab and Snag" },
     { name: "Cognitive Crossover", newname: "Kreighton's Cognitive Crossover" },
   ];
@@ -1661,6 +1730,10 @@ function getFoundryFeatLocation(pathbuilderFeatType, pathbuilderFeatLevel) {
   return null;
 }
 
+function uniq(a) {
+  return Array.from(new Set(a));
+}
+
 Hooks.on("init", () => {
   game.modules.get("pathbuilder2e-import").api = {
     beginPathbuilderImport: beginPathbuilderImport,
@@ -1669,4 +1742,32 @@ Hooks.on("init", () => {
     "pathbuilder2eimportReady",
     game.modules.get("pathbuilder2e-import").api
   );
+});
+
+Hooks.on("ready", function () {
+  console.log("%cPathbuilder2e Import | %cinitializing", pbcolor1, pbcolor4);
+
+  game.settings.register("pathbuilder2e-import", "reportMissedItems", {
+    name: "Report missed items?",
+    hint: "Having this checked will send me the error report generated during an import. Please keep this enabled so that I can continue to improve the module. It sends the following data: pathbuilder character ID and error messages presented post-import.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: (value) => (reportMissedItems = value),
+  });
+  game.settings.register("pathbuilder2e-import", "debugEnabled", {
+    name: "Enable debug mode",
+    hint: "Debug output will be written to the js console.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: (value) => (fbpiDebug = value),
+  });
+  reportMissedItems = game.settings.get(
+    "pathbuilder2e-import",
+    "reportMissedItems"
+  );
+  fbpiDebug = game.settings.get("pathbuilder2e-import", "debugEnabled");
 });
