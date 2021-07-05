@@ -1,3 +1,13 @@
+## 0.6.0 (Jul 4, 2021)
+
+* added more mappings and blacklist items
+* added a filter to prevent duplicate feats
+* expanded the reporting feature to include system, core, and module version
+* imported actors now get full health
+* embed the pathbuilder id into the actor flags
+* added an additional notification during imports that they can take a minute
+* scholar background now adds correctly and adds the assurance feat with the correct skill
+
 ## 0.5.0 (Jul 3, 2021)
 
 * fixed missing class features. some might be doubled and should be cleaned up by hand for now.

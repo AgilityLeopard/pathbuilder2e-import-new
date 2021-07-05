@@ -240,6 +240,9 @@ function checkCharacterIsCorrect(targetActor, jsonBuild) {
         ui.notifications.info(
           "Please be patient while " + jsonBuild.name + " is imported."
         );
+        ui.notifications.info(
+          "The import can take up to 1 minute on slower systems."
+        );
         importCharacter(targetActor, jsonBuild);
       }
     },
@@ -305,6 +308,7 @@ async function importCharacter(targetActor, jsonBuild) {
   let arrayArmor = jsonBuild.armor;
   let arraySpecials = jsonBuild.specials;
   let arrayLores = jsonBuild.lores;
+  let specialClassFeatures = [];
 
   // lower case languages fix
   for (var ref in jsonBuild.languages) {
@@ -321,6 +325,11 @@ async function importCharacter(targetActor, jsonBuild) {
   for (var ref in arrayFeats) {
     arrayFeats[ref][0] = mapSpecialToFoundryName(arrayFeats[ref][0]);
   }
+  [arraySpecials, arrayFeats, specialClassFeatures] = findSpecialThings(
+    arraySpecials,
+    arrayFeats,
+    specialClassFeatures
+  );
   // senses
   var senses = [];
   for (var ref in arraySpecials) {
@@ -437,6 +446,12 @@ async function importCharacter(targetActor, jsonBuild) {
         deletions
       ); // Deletes multiple EmbeddedEntity objects
     } */
+    if (jsonBuild.background.includes("Scholar (")) {
+      var regExp = /\(([^)]+)\)/;
+      var matches = regExp.exec(jsonBuild.background);
+      jsonBuild.background = "Scholar";
+      arrayFeats.push({ 0: "Assurance", 1: matches[1] });
+    }
     let packBackground = await game.packs
       .get("pf2e.backgrounds")
       .getDocuments();
@@ -449,20 +464,6 @@ async function importCharacter(targetActor, jsonBuild) {
   let classFeatures = [];
   // //class
   if (targetActor.data.data.details.class != jsonBuild.class) {
-    /* if (deleteAll) {
-      if (fbpiDebug)
-        console.log(
-          "%cPathbuilder2e Import | %cDeleting class",
-          pbcolor1,
-          pbcolor4
-        );
-      const items = targetActor.data.items.filter((i) => i.type === "class");
-      const deletions = items.map((i) => i.id);
-      const updated = await targetActor.deleteEmbeddedDocuments(
-        "Item",
-        deletions
-      ); // Deletes multiple EmbeddedEntity objects
-    } */
     if (fbpiDebug)
       console.log(
         "%cPathbuilder2e Import | %cSetting class to: " + jsonBuild.class,
@@ -522,15 +523,37 @@ async function importCharacter(targetActor, jsonBuild) {
   let blacklist = [
     jsonBuild.heritage,
     "Great Fortitude",
+    "Divine Spellcasting",
+    "Divine Ally (Blade)",
+    "Divine Smite (Antipaladin)",
+    "Exalt (Antipaladin)",
     "Intimidation",
     "Axe",
+    "Hammer",
+    "Axe",
+    "Axe",
+    "Axe",
+    "Axe",
+    "Magical Fortitude",
+    "Occult",
+    "Acrobatics",
+    "Medicine",
+    "Diplomacy",
+    "Might",
+    "Reflex",
+    "Evasion",
+    "Vigilant Senses",
+    "Iron Will",
     "Lightning Reflexes",
     "Alertness",
     "Shield Block",
     "Anathema",
     "Druidic Language",
+    "Weapon Expertise",
+    "Armor Expertise",
     "Darkvision",
     "Stealth",
+    "Divine",
     "Shield",
     "Survival",
     "Arcana",
@@ -555,30 +578,35 @@ async function importCharacter(targetActor, jsonBuild) {
     "Juggernaut",
     "Medium Armor Expertise",
     "Weapon Specialization (Barbarian)",
+    "Greater Weapon Specialization",
+    "Diplomacy",
   ];
   for (const cf in classFeatures) {
     blacklist.push(classFeatures[cf].name);
   }
   arraySpecials = arraySpecials.filter((val) => !blacklist.includes(val));
   jsonBuild.specials = uniq(arraySpecials);
-  // console.log("SPECIALS ARRAY:");
-  // console.log(arraySpecials);
 
   if (addFeats) {
     finishedAncestryFeatures = true;
     finishedClassFeatures = true;
     // console.log("%cPathbuilder2e Import | %cdoing feat items",pbcolor1,pbcolor4)
-    addFeatItems(targetActor, arrayFeats);
+    await addFeatItems(targetActor, arrayFeats);
     // console.log("%cPathbuilder2e Import | %cdoing feat items on specials",pbcolor1,pbcolor4)
-    addFeatItems(targetActor, arraySpecials);
+    await addFeatItems(targetActor, arraySpecials);
     // console.log("%cPathbuilder2e Import | %cdoing AncestryFeaturefeat items on feats",pbcolor1,pbcolor4)
     // addAncestryFeatureFeatItems(targetActor, arrayFeats);
     // console.log("%cPathbuilder2e Import | %cdoing AncestryFeaturefeat items on specials",pbcolor1,pbcolor4)
     // addAncestryFeatureFeatItems(targetActor, arraySpecials);
     // console.log("%cPathbuilder2e Import | %cdoing action items",pbcolor1,pbcolor4)
-    addActionItems(targetActor, arraySpecials);
-    addAncestryFeatureItems(targetActor, arraySpecials);
-    addClassFeatureItems(targetActor, arraySpecials, classFeatures);
+    await addActionItems(targetActor, arraySpecials);
+    await addAncestryFeatureItems(targetActor, arraySpecials);
+    await addClassFeatureItems(targetActor, arraySpecials, classFeatures);
+    await addClassFeatureItems(
+      targetActor,
+      specialClassFeatures,
+      classFeatures
+    );
   } else {
     finishedFeats = true;
     finishedAncestryFeatures = true;
@@ -586,6 +614,13 @@ async function importCharacter(targetActor, jsonBuild) {
     finishedClassFeatures = true;
     checkAllFinishedAndCreate(targetActor);
   }
+
+  // const uniqueItems = Array.from(new Set(allItems.map(a => a._id))).map(id=>{return allItems.find(a=>a._id==id)})
+  const uniqueItems = allItems.filter(function (a) {
+    return !this[a._id] && (this[a._id] = true);
+  }, Object.create(null));
+
+  allItems = uniqueItems;
 
   if (addEquipment) {
     let pack = game.packs.get("pf2e.equipment-srd");
@@ -1088,6 +1123,7 @@ async function addClassFeatureItems(targetActor, arraySpecials, arrayCF) {
       }
     }
   }
+
   let classFeatures = arrayCF.map((a) => a.name);
   for (const action of content.filter((item) =>
     specialIsRequired(item, classFeatures)
@@ -1564,7 +1600,9 @@ function checkAllFinishedAndCreate(targetActor) {
           "flags.exportSource.system": game.system.id,
           "flags.exportSource.systemVersion": game.system.data.version,
           "flags.exportSource.coreVersion": game.data.version,
+          "flags.pathbuilderID.value": buildID,
         });
+        targetActor.update({ "data.attributes.hp.value": 1234 });
         for (var ref in jsonBuild.specials) {
           if (jsonBuild.specials.hasOwnProperty(ref)) {
             var item = jsonBuild.specials[ref];
@@ -1619,11 +1657,22 @@ function checkAllFinishedAndCreate(targetActor) {
 }
 
 function reportWarnings(warnings) {
+  let systemVersion = game.system.data.version;
+  let coreVersion = game.data.version;
   var xmlhttp = new XMLHttpRequest();
   xmlhttp.open("POST", reportDomain + "/pbreport.php", true);
   xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xmlhttp.send(
-    "buildID=" + buildID + "&warnings=" + encodeURIComponent(warnings)
+    "buildID=" +
+      buildID +
+      "&warnings=" +
+      encodeURIComponent(warnings) +
+      "&systemVersion=" +
+      encodeURIComponent(systemVersion) +
+      "&coreVersion=" +
+      encodeURIComponent(coreVersion) +
+      "&fpbi=" +
+      encodeURIComponent(fpbi)
   );
 }
 function getSlug(itemName) {
@@ -1652,7 +1701,10 @@ function mapItemToFoundryName(itemName) {
       pbcolor1,
       pbcolor4
     );
-  const changeNames = [{ name: "Chain", newname: "Chain (10 feet)" }];
+  const changeNames = [
+    { name: "Chain", newname: "Chain (10 feet)" },
+    { name: "Oil", newname: "Oil (1 pint)" },
+  ];
   const newNameIdx = changeNames.findIndex(function (item) {
     return item.name == itemName;
   });
@@ -1670,6 +1722,24 @@ function mapSpecialToFoundryName(itemName) {
   const changeNames = [
     { name: "Deflect Arrows", newname: "Deflect Arrow" },
     { name: "Maestro", newname: "Maestro Muse" },
+    { name: "Tenets of Evil", newname: "The Tenets of Evil" },
+    { name: "Antipaladin [Chaotic Evil]", newname: "Antipaladin" },
+    { name: "Harmful Font", newname: "Divine Font" },
+    { name: "Healing Font", newname: "Divine Font" },
+    { name: "Deepvision", newname: "Deep Vision" },
+    { name: "Wind God's Fan", newname: "Wind God’s Fan" },
+    { name: "Redeemer [Neutral Good]", newname: "Redeemer" },
+    { name: "Enigma", newname: "Enigma Muse" },
+    { name: "Polymath", newname: "Polymath Muse" },
+    { name: "Warrior", newname: "Warrior Muse" },
+    { name: "Multifarious", newname: "Multifarious Muse" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "Ember's Eyes (Darkvision)", newname: "Ember's Eyes" },
+    { name: "Astrology", newname: "Saoc Astrology" },
     { name: "Ape", newname: "Ape Animal Instinct" },
     { name: "Duelist Dedication (LO)", newname: "Aldori Duelist Dedication" },
     { name: "Parry", newname: "Aldori Parry" },
@@ -1728,6 +1798,42 @@ function getFoundryFeatLocation(pathbuilderFeatType, pathbuilderFeatLevel) {
     return "general-" + pathbuilderFeatLevel;
   }
   return null;
+}
+
+function findSpecialThings(specialArr, featsArray, specialClassFeatures) {
+  let searchParam = "Domain: ";
+  let search = specialArr.filter((val) => {
+    if (val.includes(searchParam)) return val;
+  });
+  search.forEach((k) => {
+    let domainName = k.split(" ")[1];
+    featsArray.push({ 0: "Deity's Domain", 1: domainName });
+  });
+  specialArr = specialArr.filter((val) => {
+    if (!val.includes(searchParam)) return val;
+  });
+  searchParam = "Hunter's Edge: Outwit";
+  search = specialArr.filter((val) => {
+    if (val.includes(searchParam)) return val;
+  });
+  search.forEach((k) => {
+    specialClassFeatures.push({ 0: searchParam });
+  });
+  specialArr = specialArr.filter((val) => {
+    if (!val.includes(searchParam)) return val;
+  });
+  searchParam = "Hunter's Edge: Flurry";
+  search = specialArr.filter((val) => {
+    if (val.includes(searchParam)) return val;
+  });
+  search.forEach((k) => {
+    specialClassFeatures.push({ 0: searchParam });
+  });
+  specialArr = specialArr.filter((val) => {
+    if (!val.includes(searchParam)) return val;
+  });
+
+  return [specialArr, featsArray, specialClassFeatures];
 }
 
 function uniq(a) {
