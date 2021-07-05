@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.5.0";
+const fpbi = "0.6.0";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
