@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.0";
+const fpbi = "0.6.1";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -335,19 +335,19 @@ async function importCharacter(targetActor, jsonBuild) {
   for (var ref in arraySpecials) {
     if (arraySpecials.hasOwnProperty(ref)) {
       if (arraySpecials[ref] == "Low-Light Vision") {
-        senses[0] = {
+        senses.push({
           exceptions: "",
           label: "Low-Light Vision",
           type: "lowLightVision",
           value: "",
-        };
+        });
       } else if (arraySpecials[ref] == "Darkvision") {
-        senses[1] = {
+        senses.push({
           exceptions: "",
           label: "Darkvision",
           type: "darkvision",
           value: "",
-        };
+        });
         /*} else if (arraySpecials[ref]=="Scent") {
         senses[1]={
           exceptions: '',
@@ -376,6 +376,7 @@ async function importCharacter(targetActor, jsonBuild) {
 
   await targetActor.update({
     name: jsonBuild.name,
+    "token.name": jsonBuild.name,
     "data.details.level.value": jsonBuild.level,
     "data.details.heritage.value": jsonBuild.heritage,
     "data.details.age.value": jsonBuild.age,
@@ -451,6 +452,10 @@ async function importCharacter(targetActor, jsonBuild) {
       var matches = regExp.exec(jsonBuild.background);
       jsonBuild.background = "Scholar";
       arrayFeats.push({ 0: "Assurance", 1: matches[1] });
+    } else if (jsonBuild.background.includes("Squire (")) {
+      var regExp = /\(([^)]+)\)/;
+      var matches = regExp.exec(jsonBuild.background);
+      jsonBuild.background = "Squire";
     }
     let packBackground = await game.packs
       .get("pf2e.backgrounds")
@@ -458,6 +463,12 @@ async function importCharacter(targetActor, jsonBuild) {
     for (const item of packBackground) {
       if (item.data.data.slug == getSlug(jsonBuild.background)) {
         allItems.push(item.data);
+        for (const backgroundFeat in item.data.data.items) {
+          let newFeat = [item.data.data.items[backgroundFeat].name,null, "Background Feat",1];
+          // try to fix this at some point ^ 
+          arrayFeats.push(newFeat);
+        }
+
       }
     }
   }
@@ -525,15 +536,30 @@ async function importCharacter(targetActor, jsonBuild) {
     "Great Fortitude",
     "Divine Spellcasting",
     "Divine Ally (Blade)",
+    "Divine Ally (Shield)",
+    "Divine Ally (Steed)",
     "Divine Smite (Antipaladin)",
+    "Divine Smite (Paladin)",
+    "Divine Smite (Desecrator)",
+    "Divine Smite (Liberator)",
+    "Divine Smite (Redeemer)",
+    "Divine Smite (Tyrant)",
     "Exalt (Antipaladin)",
+    "Exalt (Paladin)",
+    "Exalt (Desecrator)",
+    "Exalt (Redeemer)",
+    "Exalt (Liberator)",
+    "Exalt (Tyrant)",
     "Intimidation",
     "Axe",
     "Hammer",
-    "Axe",
-    "Axe",
-    "Axe",
-    "Axe",
+    "Athletics",
+    "Deception",
+    "Society",
+    "Occultism",
+    "Arcane",
+    "Simple Weapon Expertise",
+    "Defensive Robes",
     "Magical Fortitude",
     "Occult",
     "Acrobatics",
@@ -551,6 +577,7 @@ async function importCharacter(targetActor, jsonBuild) {
     "Druidic Language",
     "Weapon Expertise",
     "Armor Expertise",
+    "Armor Mastery",
     "Darkvision",
     "Stealth",
     "Divine",
@@ -580,6 +607,9 @@ async function importCharacter(targetActor, jsonBuild) {
     "Weapon Specialization (Barbarian)",
     "Greater Weapon Specialization",
     "Diplomacy",
+    "Improved Evasion",
+    "Weapon Mastery",
+    "Incredible Senses"
   ];
   for (const cf in classFeatures) {
     blacklist.push(classFeatures[cf].name);
@@ -1724,6 +1754,11 @@ function mapSpecialToFoundryName(itemName) {
     { name: "Maestro", newname: "Maestro Muse" },
     { name: "Tenets of Evil", newname: "The Tenets of Evil" },
     { name: "Antipaladin [Chaotic Evil]", newname: "Antipaladin" },
+    { name: "Paladin [Lawful Good]", newname: "Paladin" },
+    { name: "Redeemer [Neutral Good]", newname: "Redeemer" },
+    { name: "Liberator [Chaotic Good]", newname: "Liberator" },
+    { name: "Tyrant [Lawful Evil]", newname: "Tyrant" },
+    { name: "Desecrator [Neutral Evil]", newname: "Desecrator" },
     { name: "Harmful Font", newname: "Divine Font" },
     { name: "Healing Font", newname: "Divine Font" },
     { name: "Deepvision", newname: "Deep Vision" },
@@ -1733,6 +1768,13 @@ function mapSpecialToFoundryName(itemName) {
     { name: "Polymath", newname: "Polymath Muse" },
     { name: "Warrior", newname: "Warrior Muse" },
     { name: "Multifarious", newname: "Multifarious Muse" },
+    { name: "Constructed (Android)", newname: "Constructed" },
+    { name: "Wakizashi", newname: "Wakizashi Weapon Familiarity" },
+    { name: "Katana", newname: "Katana Weapon Familiarity" },
+    { name: "Marked for Death", newname: "Mark for Death" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },
@@ -1796,6 +1838,8 @@ function getFoundryFeatLocation(pathbuilderFeatType, pathbuilderFeatLevel) {
     return "skill-" + pathbuilderFeatLevel;
   } else if (pathbuilderFeatType == "General Feat") {
     return "general-" + pathbuilderFeatLevel;
+  } else if (pathbuilderFeatType == "Background Feat") {
+    return "skill-" + pathbuilderFeatLevel;
   }
   return null;
 }
@@ -1823,6 +1867,16 @@ function findSpecialThings(specialArr, featsArray, specialClassFeatures) {
     if (!val.includes(searchParam)) return val;
   });
   searchParam = "Hunter's Edge: Flurry";
+  search = specialArr.filter((val) => {
+    if (val.includes(searchParam)) return val;
+  });
+  search.forEach((k) => {
+    specialClassFeatures.push({ 0: searchParam });
+  });
+  specialArr = specialArr.filter((val) => {
+    if (!val.includes(searchParam)) return val;
+  });
+  searchParam = "Hunter's Edge: Precision";
   search = specialArr.filter((val) => {
     if (val.includes(searchParam)) return val;
   });

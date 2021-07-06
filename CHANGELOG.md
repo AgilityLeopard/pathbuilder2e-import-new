@@ -1,3 +1,10 @@
+## 0.6.1 (Jul 6, 2021)
+
+* fixed a bug with senses that would break PCs
+* set the prototype token name to match the PC name.
+* squire background now adds correctly
+* background feats are added to the character (but not assigned to the BG location)
+
 ## 0.6.0 (Jul 4, 2021)
 
 * added more mappings and blacklist items
