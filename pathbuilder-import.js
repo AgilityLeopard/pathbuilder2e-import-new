@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.1";
+const fpbi = "0.6.2";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -28,6 +28,7 @@ var allItems = [];
 var jsonBuild = [];
 var addedItems = [];
 var pbButton = true;
+var pcAlign;
 
 async function doHVExport(hero, act) {
   game.modules.get("herovaultfoundry")?.api?.exportToHVFromPBHLO(hero, act);
@@ -309,6 +310,7 @@ async function importCharacter(targetActor, jsonBuild) {
   let arraySpecials = jsonBuild.specials;
   let arrayLores = jsonBuild.lores;
   let specialClassFeatures = [];
+  pcAlign = jsonBuild.alignment;
 
   // lower case languages fix
   for (var ref in jsonBuild.languages) {
@@ -381,6 +383,7 @@ async function importCharacter(targetActor, jsonBuild) {
     "data.details.heritage.value": jsonBuild.heritage,
     "data.details.age.value": jsonBuild.age,
     "data.details.gender.value": jsonBuild.gender,
+    "data.details.alignment.value": jsonBuild.alignment,
     "data.details.keyability.value": jsonBuild.keyability,
 
     "data.traits.size.value": getSizeValue(jsonBuild.size),
@@ -457,18 +460,24 @@ async function importCharacter(targetActor, jsonBuild) {
       var matches = regExp.exec(jsonBuild.background);
       jsonBuild.background = "Squire";
     }
-    let packBackground = await game.packs
-      .get("pf2e.backgrounds")
-      .getDocuments();
-    for (const item of packBackground) {
-      if (item.data.data.slug == getSlug(jsonBuild.background)) {
-        allItems.push(item.data);
-        for (const backgroundFeat in item.data.data.items) {
-          let newFeat = [item.data.data.items[backgroundFeat].name,null, "Background Feat",1];
-          // try to fix this at some point ^ 
-          arrayFeats.push(newFeat);
+    if (!jsonBuild.background.includes("Artisan")) {
+      let packBackground = await game.packs
+        .get("pf2e.backgrounds")
+        .getDocuments();
+      for (const item of packBackground) {
+        if (item.data.data.slug == getSlug(jsonBuild.background)) {
+          allItems.push(item.data);
+          for (const backgroundFeat in item.data.data.items) {
+            let newFeat = [
+              item.data.data.items[backgroundFeat].name,
+              null,
+              "Background Feat",
+              1,
+            ];
+            // try to fix this at some point ^
+            arrayFeats.push(newFeat);
+          }
         }
-
       }
     }
   }
@@ -552,6 +561,47 @@ async function importCharacter(targetActor, jsonBuild) {
     "Exalt (Tyrant)",
     "Intimidation",
     "Axe",
+    "Sword",
+    "Water",
+    "Sword Cane",
+    "Battle Axe",
+    "Bane",
+    "Air",
+    "Occultism",
+    "Performance",
+    "Alchemy",
+    "Nature",
+    "Red",
+    "Shark",
+    "Green",
+    "Divine",
+    "Sun",
+    "Fire",
+    "Might",
+    "Mace",
+    "Bronze",
+    "Spirit",
+    "Zeal",
+    "Battledancer",
+    "Light Armor Expertise",
+    "Religion",
+    "Polearm",
+    "Longsword",
+    "Moon",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
     "Hammer",
     "Athletics",
     "Deception",
@@ -609,7 +659,7 @@ async function importCharacter(targetActor, jsonBuild) {
     "Diplomacy",
     "Improved Evasion",
     "Weapon Mastery",
-    "Incredible Senses"
+    "Incredible Senses",
   ];
   for (const cf in classFeatures) {
     blacklist.push(classFeatures[cf].name);
@@ -645,6 +695,10 @@ async function importCharacter(targetActor, jsonBuild) {
     checkAllFinishedAndCreate(targetActor);
   }
 
+  blacklist = ["Bracers of Armor", "", "", "", "", ""];
+  for (const cf in allItems) {
+    blacklist.push(allItems[cf].name);
+  }
   // const uniqueItems = Array.from(new Set(allItems.map(a => a._id))).map(id=>{return allItems.find(a=>a._id==id)})
   const uniqueItems = allItems.filter(function (a) {
     return !this[a._id] && (this[a._id] = true);
@@ -1734,6 +1788,27 @@ function mapItemToFoundryName(itemName) {
   const changeNames = [
     { name: "Chain", newname: "Chain (10 feet)" },
     { name: "Oil", newname: "Oil (1 pint)" },
+    { name: "Bracelets of Dashing", newname: "Bracelet of Dashing" },
+    { name: "Aeon Stone (Dull Gray)", newname: "Aeon Stone (Dull Gre y)" },
+    { name: "Fingerprinting Kit", newname: "Fingerprint Kit" },
+    {
+      name: "Greater Unmemorable Mantle",
+      newname: "Unmemorable Mantle (Greater)",
+    },
+    { name: "Major Unmemorable Mantle", newname: "Unmemorable Mantle (Major)" },
+    { name: "Ladder", newname: "Ladder (10-foot)" },
+    { name: "Mezmerizing Opal", newname: "Mesmerizing Opal" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
   ];
   const newNameIdx = changeNames.findIndex(function (item) {
     return item.name == itemName;
@@ -1772,6 +1847,40 @@ function mapSpecialToFoundryName(itemName) {
     { name: "Wakizashi", newname: "Wakizashi Weapon Familiarity" },
     { name: "Katana", newname: "Katana Weapon Familiarity" },
     { name: "Marked for Death", newname: "Mark for Death" },
+    { name: "Precise Debilitation", newname: "Precise Debilitations" },
+    { name: "Major Lesson I", newname: "Major Lesson" },
+    { name: "Major Lesson II", newname: "Major Lesson" },
+    { name: "Major Lesson III", newname: "Major Lesson" },
+    { name: "Eye of the Arcane Lords", newname: "Eye of the Arclords" },
+    { name: "Aeromancer", newname: "Shory Aeromancer" },
+    { name: "Heatwave", newname: "Heat Wave" },
+    { name: "Bloodline: Genie (Efreeti)", newname: "Bloodline: Genie" },
+    { name: "Bite (Gnoll)", newname: "Bite" },
+    {
+      name: "Shining Oath",
+      newname: "Shining Oath (" + alignToChampion(pcAlign) + ")",
+    },
+    {
+      name: "Cognative Mutagen (Greater)",
+      newname: "Cognitive Mutagen (Greater)",
+    },
+    {
+      name: "Cognative Mutagen (Lesser)",
+      newname: "Cognitive Mutagen (Lesser)",
+    },
+    { name: "Cognative Mutagen (Major)", newname: "Cognitive Mutagen (Major)" },
+    {
+      name: "Cognative Mutagen (Moderate)",
+      newname: "Cognitive Mutagen (Moderate)",
+    },
+    { name: "Recognise Threat", newname: "Recognize Threat" },
+    { name: "Enhanced Familiar Feat", newname: "Enhanced Familiar" },
+    { name: "Aquatic Eyes (Darkvision)", newname: "Aquatic Eyes" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
+    { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },
@@ -1843,6 +1952,33 @@ function getFoundryFeatLocation(pathbuilderFeatType, pathbuilderFeatLevel) {
   }
   return null;
 }
+
+function alignToChampion(align) {
+  console.log("Got align: " + align);
+  if (align == "LG") return "Paladin";
+  else if (align == "CG") return "Liberator";
+  else if (align == "NG") return "Redeemer";
+  else if (align == "LE") return "Tyrant";
+  else if (align == "CE") return "Antipaladin";
+  else if (align == "NE") return "Desecrator";
+}
+/*
+function alignToWords(align) {
+  if (align=="LG")
+    return "Lawful Good";
+  else if  (align=="CG")
+    return "Chaotic Good";
+  else if  (align=="NG")
+    return "Neutral Good";
+  else if  (align=="LE")
+    return "Lawful Evil";
+  else if  (align=="CE")
+    return "Chaotic Evil";
+  else if  (align=="NE")
+    return "Neutral Evil";
+  else if  (align=="N")
+    return "Neutral";
+}*/
 
 function findSpecialThings(specialArr, featsArray, specialClassFeatures) {
   let searchParam = "Domain: ";

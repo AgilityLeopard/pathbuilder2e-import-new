@@ -1,9 +1,16 @@
+## 0.6.2 (Jul 20, 2021)
+
+* fixed alignment not being set on import
+* fixed Artisan background giving every damn specialty crafting. now the specialty crafting must be added by hand
+* added more mappings and blacklist items
+
 ## 0.6.1 (Jul 6, 2021)
 
 * fixed a bug with senses that would break PCs
 * set the prototype token name to match the PC name.
 * squire background now adds correctly
 * background feats are added to the character (but not assigned to the BG location)
+* added more mappings and blacklist items
 
 ## 0.6.0 (Jul 4, 2021)
 
