@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.2";
+const fpbi = "0.6.1";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -89,7 +89,8 @@ export async function beginPathbuilderImport(targetActor, isHV = false) {
         <p>Step 2: Export your character from Pathbuilder 2e via the app menu</p>
         <p>Step 3: Enter the 6 digit user ID number from the pathbuilder export dialog below</p>
         <br>
-        <p>Please note - items which cannot be matched to the Foundry database will not be imported!<p>
+        <p>Please note - items which cannot be matched to the Foundry database will not be imported!</p>
+        <p><strong>All inventory items will be removed upon import.</strong> The option to turn this off will return in the future.</p>
       <div>
       <hr/>
       <form>
@@ -99,8 +100,8 @@ export async function beginPathbuilderImport(targetActor, isHV = false) {
           <label for="checkBoxEquipment"> Import Equipment?</label><br>
           <input type="checkbox" id="checkBoxMoney" name="checkBoxMoney" checked>
           <label for="checkBoxMoney"> Import Money?</label><br><br>
-          <input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll" checked>
-          <label for="checkBoxDeleteAll"> Delete all existing items before import (including spells)?</label><br><br>
+          <!--input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll" checked>
+          < label for="checkBoxDeleteAll"> Delete all existing items before import (including spells)?</label><br><br -->
           <input type="checkbox" id="checkBoxSpells" name="checkBoxSpells" checked>
           <label for="checkBoxSpells"> Import Spells? (Always deletes existing)</label><br><br>
           ${heroVault}
@@ -169,7 +170,8 @@ export async function beginPathbuilderImport(targetActor, isHV = false) {
         addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked;
         addMoney = html.find('[name="checkBoxMoney"]')[0].checked;
         addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked;
-        deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
+        //deleteAll = html.find('[name="checkBoxDeleteAll"]')[0].checked;
+        deleteAll = true; 
         if (isHV)
           heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked;
         if (fbpiDebug)

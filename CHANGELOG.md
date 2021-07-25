@@ -1,3 +1,7 @@
+## 0.6.3 (Jul 25, 2021)
+
+* removed the option to not delete inventory, as it doesn't currently work well. it will be re-added in the future
+
 ## 0.6.2 (Jul 20, 2021)
 
 * fixed alignment not being set on import
