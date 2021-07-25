@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.1";
+const fpbi = "0.6.4";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -90,7 +90,7 @@ export async function beginPathbuilderImport(targetActor, isHV = false) {
         <p>Step 3: Enter the 6 digit user ID number from the pathbuilder export dialog below</p>
         <br>
         <p>Please note - items which cannot be matched to the Foundry database will not be imported!</p>
-        <p><strong>All inventory items will be removed upon import.</strong> The option to turn this off will return in the future.</p>
+        <p><strong>All inventory items will be removed upon import.</strong> The option to turn this off will return in the future. If you need to keep items, I recommend creating a new PC, importing via Pathbuilder to the new PC, then dragging inventory items from old PC to new PC.</p>
       <div>
       <hr/>
       <form>

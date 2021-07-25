@@ -3,7 +3,7 @@
   "title": "Pathbuilder 2e Import",
   "description": "This module allows players and GMs to import player characters built in Pathbuilder 2e",
   "author": "slate",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "minimumCoreVersion": "0.8.6",
   "compatibleCoreVersion": "0.8.8",
   "esmodules": [
@@ -14,7 +14,7 @@
   "license": "MIT",
   "url": "https://github.com/zarmstrong/foundry-pathbuilder2e-import",
   "manifest": "https://raw.githubusercontent.com/zarmstrong/foundry-pathbuilder2e-import/master/module.json",
-  "download": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/releases/download/foundry-pathbuilder2e-import-0.6.3/foundry-pathbuilder2e-import-0.6.3.zip",
+  "download": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/releases/download/foundry-pathbuilder2e-import-0.6.4/foundry-pathbuilder2e-import-0.6.4.zip",
   "changelog": "https://github.com/zarmstrong/foundry-pathbuilder2e-import/blob/master/CHANGELOG.md",
   "bugs": "https://github.com/zarmstrong/herovau.lt-foundry/issues",
   "flags": {
