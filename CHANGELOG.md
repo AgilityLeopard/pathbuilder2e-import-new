@@ -1,3 +1,7 @@
+## 0.6.5 (Jul 25, 2021)
+
+* add deity upon import
+
 ## 0.6.4 (Jul 25, 2021)
 
 * added a note on how to manage inventory on the importer screen.
