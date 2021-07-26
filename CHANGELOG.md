@@ -1,3 +1,8 @@
+## 0.6.6 (Jul 25, 2021)
+
+* remove debug code
+* fix bad versioning (again)
+
 ## 0.6.5 (Jul 25, 2021)
 
 * add deity upon import
