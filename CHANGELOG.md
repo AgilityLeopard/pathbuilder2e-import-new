@@ -1,3 +1,7 @@
+## 0.6.7 (Jul 25, 2021)
+
+* fix last build (ugh)
+
 ## 0.6.6 (Jul 25, 2021)
 
 * remove debug code
