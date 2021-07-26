@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.3";
+const fpbi = "0.6.6";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -377,11 +377,7 @@ async function importCharacter(targetActor, jsonBuild) {
     jsonBuild.attributes.classhp * jsonBuild.level +
     jsonBuild.attributes.ancestryhp +
     conBonus * jsonBuild.level;
-    console.log(
-      "%cPathbuilder2e Import | %cGot deity:" + jsonBuild.diety,
-      pbcolor1,
-      pbcolor4
-    );
+
   await targetActor.update({
     name: jsonBuild.name,
     "token.name": jsonBuild.name,
