@@ -1,3 +1,7 @@
+## 0.6.8 (August 21, 2021)
+
+* update for 0.8.9 compatability
+
 ## 0.6.7 (Jul 25, 2021)
 
 * fix last build (ugh)
