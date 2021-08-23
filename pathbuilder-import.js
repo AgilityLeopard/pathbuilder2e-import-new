@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.8";
+const fpbi = "0.6.9";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -29,6 +29,7 @@ var jsonBuild = [];
 var addedItems = [];
 var pbButton = true;
 var pcAlign;
+var focusPool=0;
 
 async function doHVExport(hero, act) {
   game.modules.get("herovaultfoundry")?.api?.exportToHVFromPBHLO(hero, act);
@@ -1410,15 +1411,28 @@ async function setSpellcasters(targetActor, arraySpellcasters) {
   updated = await targetActor.deleteEmbeddedDocuments("Item", deletions);
   // make array of spellcaster instances. put
   let requiredSpells = [];
+  
   for (var ref in arraySpellcasters) {
     if (arraySpellcasters.hasOwnProperty(ref)) {
       let spellCaster = arraySpellcasters[ref];
-      spellCaster.instance = await addSpecificCasterAndSpells(
+      focusPool+=spellCaster.focusPoints;
+      if (spellCaster.magicTradition=="focus")
+      {
+        spellCaster.instance = await addSpecificCasterAndSpells(
+          targetActor,
+          spellCaster,
+          spellCaster.magicTradition,
+          spellCaster.magicTradition
+        );        
+      } else {
+        spellCaster.instance = await addSpecificCasterAndSpells(
         targetActor,
         spellCaster,
         spellCaster.magicTradition,
         spellCaster.spellcastingType
       );
+      }
+
       for (var ref in spellCaster.spells) {
         if (spellCaster.spells.hasOwnProperty(ref)) {
           let spellListObject = spellCaster.spells[ref];
@@ -1484,7 +1498,8 @@ async function addSpecificCasterAndSpells(
       value: spellCaster.ability,
     },
     focus: {
-      pool: spellCaster.focusPoints,
+      points: spellCaster.focusPoints,
+      pool: spellCaster.focusPoints
     },
     proficiency: {
       value: spellCaster.proficiency / 2,
@@ -1689,6 +1704,7 @@ function checkAllFinishedAndCreate(targetActor) {
           "flags.exportSource.coreVersion": game.data.version,
           "flags.pathbuilderID.value": buildID,
         });
+        targetActor.update({"data.resources.focus.max": focusPool,"data.resources.focus.value": focusPool,})
         targetActor.update({ "data.attributes.hp.value": 1234 });
         for (var ref in jsonBuild.specials) {
           if (jsonBuild.specials.hasOwnProperty(ref)) {

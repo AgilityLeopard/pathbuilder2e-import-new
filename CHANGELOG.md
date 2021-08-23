@@ -1,3 +1,7 @@
+## 0.6.9 (August 21, 2021)
+
+* fix focus spells 
+
 ## 0.6.8 (August 21, 2021)
 
 * update for 0.8.9 compatability
