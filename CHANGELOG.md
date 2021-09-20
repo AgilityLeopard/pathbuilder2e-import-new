@@ -1,3 +1,7 @@
+## 0.7.1 (September 20, 2021)
+
+* fix cantrips rolling incorrect number of dice
+
 ## 0.7.0 (September 19, 2021)
 
 * add more debug messaging

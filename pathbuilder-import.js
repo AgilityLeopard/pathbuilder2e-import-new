@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.7.0";
+const fpbi = "0.7.1";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -1535,7 +1535,10 @@ async function setSpellcasters(targetActor, arraySpellcasters) {
                   ) {
                     const clonedData = JSON.parse(JSON.stringify(action.data));
                     clonedData.data.location.value = spellCaster.instance[0].id;
-                    clonedData.data.level.value = spellListObject.spellLevel;
+                    if (spellListObject.spellLevel ==0)
+                      clonedData.data.level.value = 1;
+                    else
+                      clonedData.data.level.value = spellListObject.spellLevel;
                     allItems.push(clonedData);
                     break;
                   }
