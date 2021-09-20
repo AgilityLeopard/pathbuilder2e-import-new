@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.6.9";
+const fpbi = "0.7.0";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -324,12 +324,50 @@ async function importCharacter(targetActor, jsonBuild) {
   for (var ref in arrayEquipment) {
     arrayEquipment[ref][0] = mapItemToFoundryName(arrayEquipment[ref][0]);
   }
+  if (fbpiDebug)
+    console.log(
+      "%cPathbuilder2e Import | %c Working on arraySpecials: " + arraySpecials,
+      pbcolor1,
+      pbcolor4
+    );
   for (var ref in arraySpecials) {
-    arraySpecials[ref] = mapSpecialToFoundryName(arraySpecials[ref]);
+    if (fbpiDebug)
+      console.log(
+        "%cPathbuilder2e Import | %c Checking arraySpecials[ref]: " + arraySpecials[ref],
+        pbcolor1,
+        pbcolor4
+      );
+    if (typeof arraySpecials[ref][0] !== 'undefined')
+      arraySpecials[ref] = mapSpecialToFoundryName(arraySpecials[ref]);
   }
+  if (fbpiDebug)
+    console.log(
+      "%cPathbuilder2e Import | %c Finished arraySpecials: " + arraySpecials,
+      pbcolor1,
+      pbcolor4
+    );
+  if (fbpiDebug)
+    console.log(
+      "%cPathbuilder2e Import | %c Working on arrayFeats: " + arrayFeats,
+      pbcolor1,
+      pbcolor4
+    );
   for (var ref in arrayFeats) {
-    arrayFeats[ref][0] = mapSpecialToFoundryName(arrayFeats[ref][0]);
+    if (fbpiDebug)
+      console.log(
+        "%cPathbuilder2e Import | %c Checking arrayFeats[ref][0]: " + arrayFeats[ref][0],
+        pbcolor1,
+        pbcolor4
+      );
+    if (typeof arrayFeats[ref][0] !== 'undefined')
+      arrayFeats[ref][0] = mapSpecialToFoundryName(arrayFeats[ref][0]);
   }
+  if (fbpiDebug)
+    console.log(
+      "%cPathbuilder2e Import | %c Finished arrayFeats: " + arrayFeats,
+      pbcolor1,
+      pbcolor4
+    );
   [arraySpecials, arrayFeats, specialClassFeatures] = findSpecialThings(
     arraySpecials,
     arrayFeats,
@@ -782,6 +820,12 @@ async function importCharacter(targetActor, jsonBuild) {
       )
     )) {
       for (var ref in arrayEquipment) {
+        if (fbpiDebug)
+          console.log(
+            "%cPathbuilder2e Import | %c arrayEquipment[ref]: " + arrayEquipment[ref],
+            pbcolor1,
+            pbcolor4
+          );
         if (arrayEquipment.hasOwnProperty(ref)) {
           var itemName = arrayEquipment[ref][0];
           // console.log(itemName)
@@ -881,17 +925,22 @@ async function importCharacter(targetActor, jsonBuild) {
       for (var ref in arrayArmor) {
         if (arrayArmor.hasOwnProperty(ref)) {
           var armorDetails = arrayArmor[ref];
+          if (fbpiDebug)
+            console.log(
+              "%cPathbuilder2e Import | %c armorDetails.name: " + armorDetails.name,
+              pbcolor1,
+              pbcolor4
+            );
           if (
             isNameMatch(armorDetails.name, action.data.data.slug) &&
             needsNewInstanceofItem(targetActor, armorDetails.name)
           ) {
             armorDetails.added = true;
             const clonedData = JSON.parse(JSON.stringify(action.data));
-
             if (notBracersOfArmor(armorDetails.name)) {
               clonedData.data.quantity.value = armorDetails.qty;
               clonedData.data.armorType.value = armorDetails.prof;
-              clonedData.data.potencyRune.value = armorDetails.pot.toString();
+              clonedData.data.potencyRune.value = armorDetails.pot;
               clonedData.data.resiliencyRune.value = armorDetails.res;
               // this will also catch the nulls from early json data which did not have this value
               if (armorDetails.worn) {
@@ -1018,13 +1067,36 @@ function getMaterialGrade(material) {
   return "low";
 }
 
+function makeid(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * 
+ charactersLength));
+   }
+   return result;
+}
+
 async function addFeatItems(targetActor, arrayFeats) {
   var usedLocations = [];
+  if (fbpiDebug)
+    console.log(
+      "%cPathbuilder2e Import | %c addFeatItems: " + arrayFeats,
+      pbcolor1,
+      pbcolor4
+    );  
   let content = await game.packs.get("pf2e.feats-srd").getDocuments();
   for (const action of content.filter((item) =>
     featIsRequired(item, arrayFeats)
   )) {
     for (var ref in arrayFeats) {
+      if (fbpiDebug)
+        console.log(
+          "%cPathbuilder2e Import | %c Looking at feat: " + arrayFeats[ref],
+          pbcolor1,
+          pbcolor4
+        );  
       if (arrayFeats.hasOwnProperty(ref)) {
         let pathbuilderFeatItem = arrayFeats[ref];
         var itemName = pathbuilderFeatItem[0];
@@ -1055,6 +1127,7 @@ async function addFeatItems(targetActor, arrayFeats) {
           } catch (err) {
             console.log(err);
           }
+          clonedData._id=makeid(16);
           allItems.push(clonedData);
         }
       }
@@ -1328,6 +1401,7 @@ function equipmentIsRequired(
   }
   for (var ref in arrayArmor) {
     if (arrayArmor.hasOwnProperty(ref)) {
+      arrayArmor[ref].name=mapItemToFoundryName(arrayArmor[ref].name);
       if (getSlug(arrayArmor[ref].name) === item.data.data.slug) return true;
       if (getSlugNoQuote(arrayArmor[ref].name) === item.data.data.slug)
         return true;
@@ -1800,7 +1874,7 @@ function getSlugNoQuote(itemName) {
 function mapItemToFoundryName(itemName) {
   if (fbpiDebug)
     console.log(
-      "%cPathbuilder2e Import | %cChecking map for '" + itemName + "'",
+      "%cPathbuilder2e Import | %c Checking map for '" + itemName + "'",
       pbcolor1,
       pbcolor4
     );
@@ -1817,6 +1891,7 @@ function mapItemToFoundryName(itemName) {
     { name: "Major Unmemorable Mantle", newname: "Unmemorable Mantle (Major)" },
     { name: "Ladder", newname: "Ladder (10-foot)" },
     { name: "Mezmerizing Opal", newname: "Mesmerizing Opal" },
+    { name: "Explorer's Clothing", newname: "Clothing (Explorer's)" },
     { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },
@@ -1895,7 +1970,6 @@ function mapSpecialToFoundryName(itemName) {
     { name: "Recognise Threat", newname: "Recognize Threat" },
     { name: "Enhanced Familiar Feat", newname: "Enhanced Familiar" },
     { name: "Aquatic Eyes (Darkvision)", newname: "Aquatic Eyes" },
-    { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },
     { name: "", newname: "" },

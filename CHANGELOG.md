@@ -1,3 +1,11 @@
+## 0.7.0 (September 19, 2021)
+
+* add more debug messaging
+* fix some undefined item errors during the import process
+* fix armor potency rune importing as string (should be int)
+* fix id of items to be random (this was preventing multiple of the same thing from failing to import, like assurance feat)
+* fix explorer's clothing not being importable
+
 ## 0.6.9 (August 21, 2021)
 
 * fix focus spells 
