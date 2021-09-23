@@ -1,3 +1,7 @@
+## 0.7.2 (September 23, 2021)
+
+* added more feat and item mappings
+
 ## 0.7.1 (September 20, 2021)
 
 * fix cantrips rolling incorrect number of dice
