@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.7.2";
+const fpbi = "0.7.3";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -507,7 +507,7 @@ async function importCharacter(targetActor, jsonBuild) {
         .get("pf2e.backgrounds")
         .getDocuments();
       for (const item of packBackground) {
-        if (item.data.data.slug == getSlug(jsonBuild.background)) {
+        if (item.data.data.slug == getSlug(jsonBuild.background) || item.data.data.slug == getSlugNoQuote(jsonBuild.background)) {
           allItems.push(item.data);
           for (const backgroundFeat in item.data.data.items) {
             let newFeat = [
@@ -535,7 +535,7 @@ async function importCharacter(targetActor, jsonBuild) {
     let packClasses = await game.packs.get("pf2e.classes").getDocuments();
 
     for (const item of packClasses) {
-      if (item.data.data.slug == getSlug(jsonBuild.class)) {
+      if (item.data.data.slug == getSlug(jsonBuild.class) || item.data.data.slug == getSlugNoQuote(jsonBuild.class)) {
         await targetActor.createEmbeddedDocuments("Item", [item.data]);
         // console.log(item.data.data.items);
         for (const classFeatureItem in item.data.data.items) {
@@ -575,7 +575,7 @@ async function importCharacter(targetActor, jsonBuild) {
     } */
     let packAncestry = await game.packs.get("pf2e.ancestries").getDocuments();
     for (const item of packAncestry) {
-      if (item.data.data.slug == getSlug(jsonBuild.ancestry)) {
+      if (item.data.data.slug == getSlug(jsonBuild.ancestry) || item.data.data.slug == getSlugNoQuote(jsonBuild.ancestry)) {
         allItems.push(item.data);
       }
     }
@@ -1357,19 +1357,22 @@ function featIsRequired(item, arrayFeats) {
 function specialIsRequired(item, arraySpecials) {
   for (var ref in arraySpecials) {
     if (arraySpecials.hasOwnProperty(ref)) {
-      if (getSlug(arraySpecials[ref]) == item.data.data.slug) return true;
+      if (getSlug(arraySpecials[ref]) == item.data.data.slug || getSlugNoQuote(arraySpecials[ref]) == item.data.data.slug) return true;
       if (
         getSlug(getClassAdjustedSpecialNameLowerCase(arraySpecials[ref])) ==
+        item.data.data.slug || getSlugNoQuote(getClassAdjustedSpecialNameLowerCase(arraySpecials[ref])) ==
         item.data.data.slug
       )
         return true;
       if (
         getSlug(getAncestryAdjustedSpecialNameLowerCase(arraySpecials[ref])) ==
+        item.data.data.slug || getSlugNoQuote(getAncestryAdjustedSpecialNameLowerCase(arraySpecials[ref])) ==
         item.data.data.slug
       )
         return true;
       if (
         getSlug(getHeritageAdjustedSpecialNameLowerCase(arraySpecials[ref])) ==
+        item.data.data.slug || getSlugNoQuote(getHeritageAdjustedSpecialNameLowerCase(arraySpecials[ref])) ==
         item.data.data.slug
       )
         return true;
@@ -1531,7 +1534,7 @@ async function setSpellcasters(targetActor, arraySpellcasters) {
               for (var ref in spellListObject.list) {
                 if (spellListObject.list.hasOwnProperty(ref)) {
                   if (
-                    getSlug(spellListObject.list[ref]) == action.data.data.slug
+                    getSlug(spellListObject.list[ref]) == action.data.data.slug || getSlugNoQuote(spellListObject.list[ref]) == action.data.data.slug
                   ) {
                     const clonedData = JSON.parse(JSON.stringify(action.data));
                     clonedData.data.location.value = spellCaster.instance[0].id;
@@ -2112,36 +2115,36 @@ function findSpecialThings(specialArr, featsArray, specialClassFeatures) {
   specialArr = specialArr.filter((val) => {
     if (!val.includes(searchParam)) return val;
   });
-  searchParam = "Hunter's Edge: Outwit";
-  search = specialArr.filter((val) => {
-    if (val.includes(searchParam)) return val;
-  });
-  search.forEach((k) => {
-    specialClassFeatures.push({ 0: searchParam });
-  });
-  specialArr = specialArr.filter((val) => {
-    if (!val.includes(searchParam)) return val;
-  });
-  searchParam = "Hunter's Edge: Flurry";
-  search = specialArr.filter((val) => {
-    if (val.includes(searchParam)) return val;
-  });
-  search.forEach((k) => {
-    specialClassFeatures.push({ 0: searchParam });
-  });
-  specialArr = specialArr.filter((val) => {
-    if (!val.includes(searchParam)) return val;
-  });
-  searchParam = "Hunter's Edge: Precision";
-  search = specialArr.filter((val) => {
-    if (val.includes(searchParam)) return val;
-  });
-  search.forEach((k) => {
-    specialClassFeatures.push({ 0: searchParam });
-  });
-  specialArr = specialArr.filter((val) => {
-    if (!val.includes(searchParam)) return val;
-  });
+  // searchParam = "Hunter's Edge: Outwit";
+  // search = specialArr.filter((val) => {
+  //   if (val.includes(searchParam)) return val;
+  // });
+  // search.forEach((k) => {
+  //   specialClassFeatures.push({ 0: searchParam });
+  // });
+  // specialArr = specialArr.filter((val) => {
+  //   if (!val.includes(searchParam)) return val;
+  // });
+  // searchParam = "Hunter's Edge: Flurry";
+  // search = specialArr.filter((val) => {
+  //   if (val.includes(searchParam)) return val;
+  // });
+  // search.forEach((k) => {
+  //   specialClassFeatures.push({ 0: searchParam });
+  // });
+  // specialArr = specialArr.filter((val) => {
+  //   if (!val.includes(searchParam)) return val;
+  // });
+  // searchParam = "Hunter's Edge: Precision";
+  // search = specialArr.filter((val) => {
+  //   if (val.includes(searchParam)) return val;
+  // });
+  // search.forEach((k) => {
+  //   specialClassFeatures.push({ 0: searchParam });
+  // });
+  // specialArr = specialArr.filter((val) => {
+  //   if (!val.includes(searchParam)) return val;
+  // });
 
   return [specialArr, featsArray, specialClassFeatures];
 }

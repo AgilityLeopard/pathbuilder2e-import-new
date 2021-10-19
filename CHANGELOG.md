@@ -1,3 +1,8 @@
+## 0.7.3 (Oct 19, 2021)
+
+* fixed bug with hunter's edge
+* add some extra checks for slugs
+
 ## 0.7.2 (September 23, 2021)
 
 * added more feat and item mappings
