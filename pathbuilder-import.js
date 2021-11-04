@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.7.3";
+const fpbi = "0.7.4";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -30,6 +30,7 @@ var addedItems = [];
 var pbButton = true;
 var pcAlign;
 var focusPool=0;
+var focusWarning=0;
 
 async function doHVExport(hero, act) {
   game.modules.get("herovaultfoundry")?.api?.exportToHVFromPBHLO(hero, act);
@@ -313,6 +314,10 @@ async function importCharacter(targetActor, jsonBuild) {
   let arraySpecials = jsonBuild.specials;
   let arrayLores = jsonBuild.lores;
   let specialClassFeatures = [];
+  const castingArcane = jsonBuild.proficiencies.castingArcane;
+  const castingDivine = jsonBuild.proficiencies.castingDivine;
+  const castingOccult = jsonBuild.proficiencies.castingOccult;
+  const castingPrimal = jsonBuild.proficiencies.castingPrimal;
   pcAlign = jsonBuild.alignment;
 
   // lower case languages fix
@@ -1495,11 +1500,12 @@ async function setSpellcasters(targetActor, arraySpellcasters) {
       focusPool+=spellCaster.focusPoints;
       if (spellCaster.magicTradition=="focus")
       {
+        focusWarning=1;
         spellCaster.instance = await addSpecificCasterAndSpells(
           targetActor,
           spellCaster,
+          "divine",
           spellCaster.magicTradition,
-          spellCaster.magicTradition
         );        
       } else {
         spellCaster.instance = await addSpecificCasterAndSpells(
@@ -1573,31 +1579,20 @@ async function addSpecificCasterAndSpells(
 ) {
   const spellcastingEntity = {
     ability: {
-      type: "String",
-      label: "Spellcasting Ability",
       value: spellCaster.ability,
-    },
-    focus: {
-      points: spellCaster.focusPoints,
-      pool: spellCaster.focusPoints
     },
     proficiency: {
       value: spellCaster.proficiency / 2,
     },
     spelldc: {
-      type: "String",
-      label: "Class DC",
       item: 0,
     },
     tradition: {
-      type: "String",
-      label: "Magic Tradition",
       value: magicTradition,
     },
     prepared: {
-      type: "String",
-      label: "Spellcasting Type",
       value: spellcastingType,
+      flexible: false
     },
     slots: {
       slot0: {
@@ -1805,6 +1800,14 @@ function checkAllFinishedAndCreate(targetActor) {
       }
 
       warning += "</ul><br>";
+      if (focusWarning>0)
+      {
+        if (notAddedCount>0)
+          warning += "<strong>You have focus spells and Pathbuilder does not export the tradition of focus spells. This importer automatically sets their tradition to divine. If this is incorrect, edit the focus spells entry to fix it.</strong><br>";
+        else
+          warning = "<strong>You have focus spells and Pathbuilder does not export the tradition of focus spells. This importer automatically sets their tradition to divine. If this is incorrect, edit the focus spells entry to fix it.</strong><br>";
+        notAddedCount++;
+      }
       if (reportMissedItems) reportWarnings(warningList);
 
       if (notAddedCount > 0) {

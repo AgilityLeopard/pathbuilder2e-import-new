@@ -1,3 +1,7 @@
+## 0.7.4 (Nov 4, 2021)
+
+* fixed focus spells
+
 ## 0.7.3 (Oct 19, 2021)
 
 * fixed bug with hunter's edge
