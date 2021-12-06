@@ -1,3 +1,7 @@
+## 0.7.5 (Dec 6, 2021)
+
+* fixed armor category
+
 ## 0.7.4 (Nov 4, 2021)
 
 * fixed focus spells

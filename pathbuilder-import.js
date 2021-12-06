@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.7.4";
+const fpbi = "0.7.5";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -944,7 +944,7 @@ async function importCharacter(targetActor, jsonBuild) {
             const clonedData = JSON.parse(JSON.stringify(action.data));
             if (notBracersOfArmor(armorDetails.name)) {
               clonedData.data.quantity.value = armorDetails.qty;
-              clonedData.data.armorType.value = armorDetails.prof;
+              clonedData.data.category = armorDetails.prof;
               clonedData.data.potencyRune.value = armorDetails.pot;
               clonedData.data.resiliencyRune.value = armorDetails.res;
               // this will also catch the nulls from early json data which did not have this value
