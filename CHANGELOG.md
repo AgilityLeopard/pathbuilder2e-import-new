@@ -1,3 +1,7 @@
+## 0.9.1 (Mar 7, 2022)
+
+* fix error message
+
 ## 0.9.0 (Mar 7, 2022)
 
 * disabled in v9
