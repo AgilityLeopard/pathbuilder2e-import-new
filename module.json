@@ -13,10 +13,10 @@
   "styles": [],
   "packs": [],
   "license": "MIT",
-  "url": "https://github.com/AgilityLeopard/foundry-pathbuilder2e-import-new",
-  "manifest": "https://raw.githubusercontent.com/AgilityLeopard/foundry-pathbuilder2e-import-new/master/module.json",
-  "download": "https://github.com/AgilityLeopard/foundry-pathbuilder2e-import-new/releases/download/v0.1alpha/foundry-pathbuilder2e-import-new-0.1alpha.zip",
-  "changelog": "https://github.com/AgilityLeopard/foundry-pathbuilder2e-import-new/blob/master/CHANGELOG.md",
+  "url": "https://github.com/AgilityLeopard/pathbuilder2e-import-new",
+  "manifest": "https://raw.githubusercontent.com/AgilityLeopard/pathbuilder2e-import-new/master/module.json",
+  "download": "https://github.com/AgilityLeopard/pathbuilder2e-import-new/releases/download/v0.1alpha/foundry-pathbuilder2e-import-new-0.1alpha.zip",
+  "changelog": "https://github.com/AgilityLeopard/pathbuilder2e-import-new/blob/master/CHANGELOG.md",
   "bugs": "",
   "flags": {
     "allowBugReporter": false
