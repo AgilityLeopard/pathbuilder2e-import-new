@@ -4,6 +4,7 @@
   "description": "Тестовый модуль для учёбы",
   "author": "slate",
   "version": "0.9.1",
+  "id": "pathbuilder2e-import-new",
   "minimumCoreVersion": "9.235",
   "compatibleCoreVersion": "9.255",
   "esmodules": [
