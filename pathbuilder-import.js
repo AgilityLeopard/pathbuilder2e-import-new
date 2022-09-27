@@ -1,5 +1,5 @@
 var fbpiDebug = false;
-const fpbi = "0.7.5";
+const fpbi = "0.10.0";
 const reportDomain = "https://www.pf2player.com/";
 
 const pbcolor1 = "color: #7bf542"; //bright green
@@ -32,20 +32,20 @@ var pcAlign;
 var focusPool=0;
 var focusWarning=0;
 
-async function doHVExport(hero, act) {
-  game.modules.get("herovaultfoundry")?.api?.exportToHVFromPBHLO(hero, act);
-  return;
-}
+// async function doHVExport(hero, act) {
+//   game.modules.get("herovaultfoundry")?.api?.exportToHVFromPBHLO(hero, act);
+//   return;
+// }
 
-Hooks.on("herovaultfoundryReady", (api) => {
-  if (fbpiDebug)
-    console.log(
-      "%cPathbuilder2e Import | %cDisabling pathbuilder button since herovault is loaded",
-      pbcolor1,
-      pbcolor4
-    );
-  pbButton = false;
-});
+// Hooks.on("herovaultfoundryReady", (api) => {
+//   if (fbpiDebug)
+//     console.log(
+//       "%cPathbuilder2e Import | %cDisabling pathbuilder button since herovault is loaded",
+//       pbcolor1,
+//       pbcolor4
+//     );
+//   pbButton = false;
+// });
 
 Hooks.on("renderActorSheet", async function (obj, html) {
   // Only inject the link if the actor is of type "character" and the user has permission to update it
