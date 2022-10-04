@@ -1558,16 +1558,18 @@ Hooks.on("herovaultfoundryReady", api => {
     game.modules.get("pathbuilder2e-import").api = {
         beginPathbuilderImport: beginPathbuilderImport
     }, Hooks.callAll("pathbuilder2eimportReady", game.modules.get("pathbuilder2e-import").api)
-}), Hooks.on("ready", function() {
-    console.log("%cPathbuilder2e Import | %cinitializing", pbcolor1, pbcolor4), game.settings.register("pathbuilder2e-import", "reportMissedItems", {
-        name: "Report missed items?",
-        hint: "Having this checked will send me the error report generated during an import. Please keep this enabled so that I can continue to improve the module. It sends the following data: pathbuilder character ID and error messages presented post-import.",
-        scope: "client",
-        config: !0,
-        type: Boolean,
-        default: !0,
-        onChange: value => reportMissedItems = value
-    }), game.settings.register("pathbuilder2e-import", "debugEnabled", {
+}), 
+    Hooks.on("ready", function() {
+//     console.log("%cPathbuilder2e Import | %cinitializing", pbcolor1, pbcolor4), game.settings.register("pathbuilder2e-import", "reportMissedItems", {
+//         name: "Report missed items?",
+//         hint: "Having this checked will send me the error report generated during an import. Please keep this enabled so that I can continue to improve the module. It sends the following data: pathbuilder character ID and error messages presented post-import.",
+//         scope: "client",
+//         config: !0,
+//         type: Boolean,
+//         default: !0,
+//         onChange: value => reportMissedItems = value
+//     }), 
+    game.settings.register("pathbuilder2e-import", "debugEnabled", {
         name: "Enable debug mode",
         hint: "Debug output will be written to the js console.",
         scope: "client",
