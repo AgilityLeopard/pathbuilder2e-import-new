@@ -26,7 +26,7 @@ In future Interface will be translated on ru and other language.
 
 ### Future Idea
 
-
+This is my study project and I'm not sure I'll support it. But if it works out, in addition to improving the project, I would like to add new functionality to it that is useful for players, as well as various HB and settings.
 
 ### Credits
 This module was originally created by [Docter-Unspeakable](https://github.com/Doctor-Unspeakable) and [zarmstrong](https://github.com/zarmstrong).
