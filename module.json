@@ -1,7 +1,7 @@
 {
   "name": "pathbuilder2e-import-new",
   "title": "Pathbuilder 2e Import BETA fo Foundry v10",
-  "description": "This is a revision of the module, which is no longer supported for current versions of foundry v10. It allows you to transfer your character from the site or application Pathbuilder to your sheet in Foundry",
+  "description": "This is a revision of the module, which is supported for current versions of foundry v10. It allows you to transfer your character from the site or application Pathbuilder to your sheet in Foundry",
   "author": "Shadow",
   "version": "1.0 BETA",
   "id": "pathbuilder2e-import-new",
