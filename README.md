@@ -22,6 +22,14 @@ WARNING! ! ! I highly, highly recommend creating a new character sheet (or ask t
 
 - 4) Enter the 6 digit reference number you got from Pathbuilder and click import.
 
+### For Localization
+
+In future Interface will be translated on ru and other language.
+
+### Future Idea
+
+
+
 ### Credits
 This module was originally created by [Docter-Unspeakable](https://github.com/Doctor-Unspeakable) and [zarmstrong](https://github.com/zarmstrong).
 
