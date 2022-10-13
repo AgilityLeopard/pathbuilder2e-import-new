@@ -661,10 +661,10 @@ async function addClassFeatureItems(targetActor, arraySpecials, arrayCF) {
     var PathN = 1;
     for (var t in ArSp)  
     for(var ref in allItems)
+        if(allItems[ref].type != "feat")
         if(allItems[ref].system && allItems[ref].system.rules)
         for (var rule in allItems[ref].system.rules)
             {       
-                
                     if(allItems[ref].system.rules[rule].key == "ChoiceSet")
                     {
                         //Если не выбор божества у клирика
@@ -699,7 +699,7 @@ async function addClassFeatureItems(targetActor, arraySpecials, arrayCF) {
                             var ChoiceClass = wp.find(function(item) {
                                 return item == ArSp[t]
                             });
-                            if(allItems[ref].system.slug == "fighter-weapon-mastery")
+                            if(allItems[ref].system.slug == "fighter-weapon-mastery" || allItems[ref].system.slug == "weapon-legend")
                             if(ChoiceClass)
                             {
                                 allItems[ref].name = allItems[ref].name + " (" + ChoiceClass + ")";
