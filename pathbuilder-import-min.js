@@ -7,6 +7,7 @@ const fpbi = "10.286",
     pbcolor3 = "color: #ffffff",
     pbcolor4 = "color: #cccccc",
     pbcolor5 = "color: #ff0000";
+var rJSON;
 var buildID, pcAlign, applyChanges = !1,
     finishedFeats = !1,
     finishedActions = !1,
@@ -17,12 +18,13 @@ var buildID, pcAlign, applyChanges = !1,
     finishedSpells = !1,
     addFeats = !1,
     addEquipment = !1,
-    addMoney = !1,
+    addMoney = !0,
     addSpellcasters = !1,
     deleteAll = !1,
     heroVaultExport = !1,
     reportMissedItems = !1,
     allItems = [],
+    allSpells = [],
     jsonBuild = [],
     addedItems = [],
     pbButton = !0,
@@ -34,38 +36,366 @@ var buildID, pcAlign, applyChanges = !1,
 async function doHVExport(hero, act) {
     game.modules.get("herovaultfoundry")?.api?.exportToHVFromPBHLO(hero, act)
 }
+
+async function beginWanderersImport(targetActor, isHV = !1) {
+    finishedSpells = finishedEquipment = finishedAncestryFeatures = finishedClassFeatures = finishedActions = finishedFeats = applyChanges = !1, allItems = [];
+  new Dialog({
+    title: "Import Wanderer's Guide Character",
+    content: `
+        <div>
+            <p>It's recommended to import into a fresh character sheet and not an existing one to avoid any potential issues.</p>
+            <hr />
+            <p>
+                To export your character from Wanderer's Guide:
+            <p>
+            <ol>
+                <li>Go to <a href="https://wanderersguide.app/profile/characters">your Wanderer's Guide characters list</a></li>
+                <li>Click the "Options" button on the character you would like to export</li>
+                <li>Select the "Export" option <em>(do not choose "Export to PDF")</em></li>
+                <li>Save the downloaded file to your computer!</li>
+                <li>Select the file you just downloaded in the input below and click "Import Character"!</li>
+            </ol>
+            <div class="form-group">
+                <label for="feat-purge">Delete existing feats?</label>
+                <input id="feat-purge" type="checkbox" checked>
+            </div>
+            <div class="form-group">
+                <label for="char-file-import">Import .guidechar file</label>
+                <input id="char-file-import" type="file" accept=".guidechar">
+            </div>
+        </div>
+    `,
+    buttons: {
+      close: {
+        label: "Nevermind",
+      },
+      import: {
+        icon: '<i class="fas fa-file-import"></i>',
+        label: "Import Character",
+        callback: (el) => handleImport(el, targetActor),
+      },
+    },
+    default: "close",
+  }).render(!0);
+    
+}
+
+ function loadFile(file) {
+     return new Promise(resolve=>{
+        let reader = new FileReader()
+        
+        reader.onload = function(event) {
+            let data = event.target.result
+            var newArr = JSON.parse(data);
+            resolve(newArr)
+        }
+        reader.readAsText(file)
+    })
+    }
+
+async function handleImport(
+  elDialog,
+  actor
+) {
+
+  const el = $(elDialog);
+
+  const fileInput = el.find("#char-file-import").get(0);
+  const charFile = (fileInput.files ?? [])[0];
+  const purgeFeatCheckbox = el.find("#feat-purge").get(0);
+
+
+
+  if (!charFile) {
+    ui.notifications?.error("Unable to find uploaded .guidechar file!");
+    return;
+  }
+
+  const fileReader = new FileReader();
+    var responseJSON;
+    // fileReader.onload  = receivedText;
+     let data1;
+    
+    data1 = await loadFile(charFile);
+
+    importCharacterWander(actor, data1)
+    
+  
+}
+
+///////////// WanderersGuide
+async function importCharacterWander(targetActor, jsonBuild) {
+
+    let arrayFeats = jsonBuild.build.feats,
+        arrayEquipment = jsonBuild.invItems,
+        arrayWeapons = jsonBuild.invItems,
+        arrayArmor = jsonBuild.invItems,
+        arraySpecials = jsonBuild.build.feats;
+    var arrayLores = jsonBuild.profs,
+        backpackData = []
+
+    
+    //jsonBuild.proficiencies.castingArcane, jsonBuild.proficiencies.castingDivine, jsonBuild.proficiencies.castingOccult, jsonBuild.proficiencies.castingPrimal;
+    for (ref in jsonBuild.build.languages) jsonBuild.build.languages.hasOwnProperty(ref) && (jsonBuild.build.languages[ref].value.name = jsonBuild.build.languages[ref].value.name.toLowerCase());
+    for (ref in arrayEquipment) arrayEquipment[ref][0] = mapItemToFoundryName(arrayEquipment[ref][0]);
+    for (ref in fbpiDebug && console.log("%cPathbuilder2e Import | %c Working on arraySpecials: " + arraySpecials, pbcolor1, pbcolor4), arraySpecials) fbpiDebug && console.log("%cPathbuilder2e Import | %c Checking arraySpecials[ref]: " + arraySpecials[ref], pbcolor1, pbcolor4), void 0 !== arraySpecials[ref][0] && (arraySpecials[ref] = mapSpecialToFoundryName(arraySpecials[ref]));
+    for (ref in fbpiDebug && console.log("%cPathbuilder2e Import | %c Finished arraySpecials: " + arraySpecials, pbcolor1, pbcolor4), fbpiDebug && console.log("%cPathbuilder2e Import | %c Working on arrayFeats: " + arrayFeats, pbcolor1, pbcolor4), arrayFeats) fbpiDebug && console.log("%cPathbuilder2e Import | %c Checking arrayFeats[ref][0]: " + arrayFeats[ref][0], pbcolor1, pbcolor4), void 0 !== arrayFeats[ref][0] && (arrayFeats[ref][0] = mapSpecialToFoundryName(arrayFeats[ref][0]));
+    //fbpiDebug && console.log("%cPathbuilder2e Import | %c Finished arrayFeats: " + arrayFeats, pbcolor1, pbcolor4), [arraySpecials, arrayFeats, backpackData] = findSpecialThings(arraySpecials, arrayFeats, backpackData);
+    var senses = [];
+
+    var matches, newFeature;
+    //jsonBuild.attributes.bonushp, jsonBuild.attributes.classhp, jsonBuild.level, jsonBuild.attributes.ancestryhp, conBonus, jsonBuild.level;
+    
+    if ((await targetActor.update({
+            name: jsonBuild.name,
+            name: jsonBuild.name,
+            "token.name": jsonBuild.name,
+            "system.details.level.value": jsonBuild.character.level,
+            "system.level.value": jsonBuild.character.level,
+            "system.details.heritage": jsonBuild.heritage,
+            "system.details.age.value": jsonBuild.age,
+            "system.details.gender.value": jsonBuild.gender,
+            "system.details.alignment.value": jsonBuild.alignment,
+            "system.details.keyability.value": jsonBuild.keyability,
+            "system.details.deity.value": jsonBuild.deity,
+            "system.deity.value": jsonBuild.deity,
+            "ancestry": jsonBuild.ancestry,
+            "background": jsonBuild.background,
+            "system.size.value": getSizeValue(jsonBuild.size),
+            "system.traits.languages.value": jsonBuild.languages,
+            "system.traits.senses": senses,
+            /*"system.abilities.str.value": jsonBuild.abilities.str,
+            "system.abilities.dex.value": jsonBuild.abilities.dex,
+            "system.abilities.con.value": jsonBuild.abilities.con,
+            "system.abilities.int.value": jsonBuild.abilities.int,
+            "system.abilities.wis.value": jsonBuild.abilities.wis,
+            "system.abilities.cha.value": jsonBuild.abilities.cha,*/
+           "system.saves.fortitude.rank": getProfsValue(jsonBuild.profs.Fortitude),
+            "system.saves.reflex.rank": getProfsValue(jsonBuild.profs.Reflex),
+            "system.saves.will.rank": getProfsValue(jsonBuild.profs.Will),
+            "system.martial.advanced.rank": getProfsValue(jsonBuild.profs.Advanced),
+            "system.martial.heavy.rank": getProfsValue(jsonBuild.profs.Heavy_Armor),
+            "system.martial.light.rank": getProfsValue(jsonBuild.profs.Light_Armor),
+            "system.martial.medium.rank": getProfsValue(jsonBuild.profs.Medium_Armor),
+            "system.martial.unarmored.rank": getProfsValue(jsonBuild.profs.Unarmored_Defense),
+            "system.martial.martial.rank": getProfsValue(jsonBuild.profs.Martial_Weapons),
+            "system.martial.simple.rank": getProfsValue(jsonBuild.profs.Simple_Weapons),
+            "system.martial.unarmed.rank": getProfsValue(jsonBuild.profs.Unarmed_Attacks),
+            "system.skills.acr.rank": getProfsValue(jsonBuild.profs.Acrobatics),
+            "system.skills.arc.rank": getProfsValue(jsonBuild.profs.Arcana),
+            "system.skills.ath.rank": getProfsValue(jsonBuild.profs.Athletics),
+            "system.skills.cra.rank": getProfsValue(jsonBuild.profs.Crafting),
+            "system.skills.dec.rank": getProfsValue(jsonBuild.profs.Deception),
+            "system.skills.dip.rank": getProfsValue(jsonBuild.profs.Diplomacy),
+            "system.skills.itm.rank": getProfsValue(jsonBuild.profs.Intimidation),
+            "system.skills.med.rank": getProfsValue(jsonBuild.profs.Medicine),
+            "system.skills.nat.rank": getProfsValue(jsonBuild.profs.Nature),
+            "system.skills.occ.rank": getProfsValue(jsonBuild.profs.Occultism),
+            "system.skills.prf.rank": getProfsValue(jsonBuild.profs.Performance),
+            "system.skills.rel.rank": getProfsValue(jsonBuild.profs.Religion),
+            "system.skills.soc.rank": getProfsValue(jsonBuild.profs.Society),
+            "system.skills.ste.rank": getProfsValue(jsonBuild.profs.Stealth),
+            "system.skills.sur.rank": getProfsValue(jsonBuild.profs.Survival),
+            "system.skills.thi.rank": getProfsValue(jsonBuild.profs.Thievery),
+            "system.attributes.perception.rank": getProfsValue(jsonBuild.profs.Perception),
+            "system.attributes.classDC.rank": getProfsValue(jsonBuild.profs.Class_DC)
+            }), null == targetActor.background || targetActor.background != jsonBuild.character._background.name) && (jsonBuild.character._background.name.includes("Scholar (") ? (matches = /\(([^)]+)\)/.exec(jsonBuild.character._background.name), jsonBuild.character._background.name = "Scholar", arrayFeats.push({
+            0: "Assurance",
+            1: matches[1]
+        })) : jsonBuild.character._background.name.includes("Squire (") && (matches = /\(([^)]+)\)/.exec(jsonBuild.character._background.name), jsonBuild.character._background.name = "Squire"), !jsonBuild.character._background.name.includes("Artisan")))
+          
+        
+        for (const item of await game.packs.get("pf2e.backgrounds").getDocuments())
+             if (item.system.slug == getSlug(jsonBuild.character._background.name) || item.system.slug == getSlugNoQuote(jsonBuild.character._background.name)) {
+                allItems.push(item.system);
+                 for (const backgroundFeat in item.system.items) {
+                     var newFeat = [item.system.items[backgroundFeat].name, null, "Background Feat", 1];
+                     arrayFeats.splice(0, 1);
+                     arrayFeats.push(newFeat);
+                     break
+                 }
+                 //}
+            } 
+    
+    
+    let classFeatures = [];
+
+    
+    if (targetActor.class != jsonBuild.character._class.name) {
+        fbpiDebug && console.log("%cPathbuilder2e Import | %cSetting class to: " + jsonBuild.character._class.name, pbcolor1, pbcolor4);
+        for (const item of await game.packs.get("pf2e.classes").getDocuments())
+            if (item.system.slug == getSlug(jsonBuild.character._class.name) || item.system.slug == getSlugNoQuote(jsonBuild.character._class.name)) {
+                await targetActor.createEmbeddedDocuments("Item", [item.data]);
+                for (const classFeatureItem in item.system.items) jsonBuild.character.level >= item.system.items[classFeatureItem].level && (newFeature = {
+                    uuid: item.system.items[classFeatureItem].uuid,
+                    img: item.system.items[classFeatureItem].img,
+                    name: item.system.items[classFeatureItem].name,
+                    level: item.system.items[classFeatureItem].level,
+                    
+                }, classFeatures.push(newFeature))
+                
+            }
+    }
+ if (targetActor.ancestry != jsonBuild.character._ancestry.name)
+        for (const item of await game.packs.get("pf2e.ancestries").getDocuments()) item.system.slug != getSlug(jsonBuild.character._ancestry.name) && item.system.slug != getSlugNoQuote(jsonBuild.character._ancestry.name) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
+    if (targetActor.heritage != jsonBuild.character._heritage.name)
+        for (const item of await game.packs.get("pf2e.heritages").getDocuments()) item.system.slug != getSlug(jsonBuild.character._heritage.name) && item.system.slug != getSlugNoQuote(jsonBuild.character._heritage.name) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
+     if (targetActor.background != jsonBuild.character._background.name)
+        for (const item of await game.packs.get("pf2e.backgrounds").getDocuments()) item.system.slug != getSlug(jsonBuild.character._background.name) && item.system.slug != getSlugNoQuote(jsonBuild.character._background.name) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
+    
+    var t = allItems.length - 1;
+
+               
+    //LocationBack = allItems[t]._id;
+    //if (targetActor.deity != jsonBuild.deity)
+      //  for (const item of await game.packs.get("pf2e.deities").getDocuments()) item.system.slug != getSlug(jsonBuild.deity) && item.system.slug != getSlugNoQuote(jsonBuild.background) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
+    //let blacklist = [jsonBuild.heritage, "Great Fortitude", "Divine Spellcasting", "Divine Ally (Blade)", "Divine Ally (Shield)", "Divine Ally (Steed)", "Divine Smite (Antipaladin)", "Divine Smite (Paladin)", "Divine Smite (Desecrator)", "Divine Smite (Liberator)", "Divine Smite (Redeemer)", "Divine Smite (Tyrant)", "Exalt (Antipaladin)", "Exalt (Paladin)", "Exalt (Desecrator)", "Exalt (Redeemer)", "Exalt (Liberator)", "Exalt (Tyrant)", "Intimidation", "Axe", "Sword", "Water", "Sword Cane", "Battle Axe", "Bane", "Air", "Occultism", "Performance", "Alchemy", "Nature", "Red", "Shark", "Green", "Divine", "Sun", "Fire", "Might", "Mace", "Bronze", "Spirit", "Zeal", "Battledancer", "Light Armor Expertise", "Religion", "Polearm", "Longsword", "Moon", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Hammer", "Athletics", "Deception", "Society", "Occultism", "Arcane", "Simple Weapon Expertise", "Defensive Robes", "Magical Fortitude", "Occult", "Acrobatics", "Medicine", "Diplomacy", "Might", "Reflex", "Evasion", "Vigilant Senses", "Iron Will", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema", "Druidic Language", "Weapon Expertise", "Armor Expertise", "Armor Mastery", "Darkvision", "Stealth", "Divine", "Shield", "Survival", "Arcana", "Will", "Fortitude", "Signature Spells", "Low-Light Vision", "Powerful Fist", "Mystic Strikes", "Incredible Movement", "Claws", "Wild Empathy", "Aquatic Adaptation", "Resolve", "Expert Spellcaster", "Master Spellcaster", "Legendary Spellcaster", "Weapon Specialization", "Mighty Rage", "Deny Advantage", "Critical Brutality", "Juggernaut", "Medium Armor Expertise", "Weapon Specialization (Barbarian)", "Greater Weapon Specialization", "Diplomacy", "Improved Evasion", "Weapon Mastery", "Incredible Senses"];
+       
+    
+    let blacklist = [jsonBuild.character._heritage.name, "Intimidation", "Occultism", "Performance", "Nature", "Red", "Shark", "Green", "Divine", "Religion",  "", "", "", "", "", "", "", "", "", "", "", "", "", "",  "Athletics", "Deception", "Society", "Occultism", "Arcane",  "Occult", "Acrobatics", "Medicine", "Diplomacy",  "Darkvision", "Stealth", "Divine", "Survival", "Arcana", "Low-Light Vision",  "Diplomacy"];
+    // for (const cf in classFeatures) blacklist.push(classFeatures[cf].name);
+    //Добавить Классовые Особенности
+    let classfeat = await game.packs.get("pf2e.classfeatures").getDocuments();
+    
+    arraySpecials = arraySpecials.filter(val => !blacklist.includes(val)), jsonBuild.specials = uniq(arraySpecials), addFeats ? (finishedClassFeatures = finishedAncestryFeatures = !0, await addFeatItems(targetActor, arrayFeats), await addFeatItems(targetActor, arraySpecials), await addActionItems(targetActor, arraySpecials), await addAncestryFeatureItems(targetActor, arraySpecials)) : (finishedClassFeatures = finishedActions = finishedAncestryFeatures = finishedFeats = !0, checkAllFinishedAndCreate(targetActor)), blacklist = ["Bracers of Armor", "", "", "", "", ""];
+    
+      
+    for (const item of await game.packs.get("pf2e.feats-srd").getDocuments()) 
+        for (const item1 in allItems) 
+            if (allItems[item1].type == "feat")
+                if(allItems[item1].system.featType.value == "skill" || allItems[item1].system.featType.value == "class" || allItems[item1].system.featType.value == "ancestry" || allItems[item1].system.featType.value == "general")
+            item.system.slug != allItems[item1].system.slug && item.system.slug != allItems[item1].system.slug || await targetActor.createEmbeddedDocuments("Item", [allItems[item1]]);
+    
+    var equip = []; 
+    for (const cf in allItems) blacklist.push(allItems[cf].name);
+    if (allItems = allItems.filter(function(a) {
+            return !this[a._id] && (this[a._id] = !0)
+        }, 
+        Object.create(null)), addEquipment) {
+        let pack = game.packs.get("pf2e.equipment-srd"),
+            content = await game.packs.get("pf2e.equipment-srd").getDocuments();
+        backpackData = await pack.getDocuments("3lgwjrFEsQVKzhh7");
+        let backpackInstance = [],
+            arrayKit = [];
+        hasAdventurersPack(arrayEquipment) && (backpackInstance = await targetActor.createEmbeddedDocuments("Inventory", backpackData), arrayKit.push(["bedroll", 1]), arrayKit.push(["chalk", 10]), arrayKit.push(["flint-and-steel", 1]), arrayKit.push(["rope", 1]), arrayKit.push(["rations", 14]), arrayKit.push(["torch", 5]), arrayKit.push(["waterskin", 1]));
+        for (const action of content.filter(item => equipmentIsRequired(item, arrayEquipment, arrayWeapons, arrayArmor, arrayKit, addMoney))) {
+            for (var ref in arrayEquipment)
+                if (fbpiDebug && console.log("%cPathbuilder2e Import | %c arrayEquipment[ref]: " + arrayEquipment[ref], pbcolor1, pbcolor4), arrayEquipment.hasOwnProperty(ref)) {
+                    var itemName = arrayEquipment[ref][0];
+                    if (isNameMatch(itemName, action.system.slug) && needsNewInstanceofItem(targetActor, arrayEquipment[ref][0])) {
+                        var itemAmount = arrayEquipment[ref][1];
+                        arrayEquipment[ref].added = !0;
+                        const clonedData = JSON.parse(JSON.stringify(action));
+                        "kit" != clonedData.type && (clonedData.quantity = itemAmount, equip.push(clonedData))
+                    }
+                } for (var ref in arrayKit)
+                if (arrayKit.hasOwnProperty(ref))
+                    if (arrayKit[ref][0] === action.system.slug && needsNewInstanceofItem(targetActor, itemName)) {
+                        itemAmount = arrayKit[ref][1];
+                        const clonedData = JSON.parse(JSON.stringify(action));
+                        clonedData.quantity = itemAmount, clonedData.containerId.value = backpackInstance.id, equip.push(clonedData)
+                    } for (var ref in arrayWeapons)
+                if (arrayWeapons.hasOwnProperty(ref)) {
+                    var material, weaponDetails = arrayWeapons[ref];
+                    if (isNameMatch(weaponDetails.name, action.system.slug) && needsNewInstanceofItem(targetActor, weaponDetails.name)) {
+                        weaponDetails.added = !0;
+                        const clonedData = JSON.parse(JSON.stringify(action));
+                        clonedData.system.quantity = weaponDetails.qty, clonedData.system.damage.die = weaponDetails.die, clonedData.system.potencyRune.value = weaponDetails.pot, clonedData.system.strikingRune.value = weaponDetails.str, weaponDetails.runes[0] && (clonedData.system.propertyRune1.value = camelCase(weaponDetails.runes[0])), weaponDetails.runes[1] && (clonedData.system.propertyRune2.value = camelCase(weaponDetails.runes[1])), weaponDetails.runes[2] && (clonedData.system.propertyRune3.value = camelCase(weaponDetails.runes[2])), weaponDetails.runes[3] && (clonedData.system.propertyRune4.value = camelCase(weaponDetails.runes[3])), weaponDetails.mat && (material = weaponDetails.mat.split(" (")[0], clonedData.system.preciousMaterial.value = camelCase(material), clonedData.system.preciousMaterialGrade.value = getMaterialGrade(weaponDetails.mat)), weaponDetails.display && (clonedData.name = weaponDetails.display), equip.push(clonedData)
+                    }
+                } for (var ref in arrayArmor)
+                if (arrayArmor.hasOwnProperty(ref)) {
+                    var armorDetails = arrayArmor[ref];
+                    if (fbpiDebug && console.log("%cPathbuilder2e Import | %c armorDetails.name: " + armorDetails.name, pbcolor1, pbcolor4), isNameMatch(armorDetails.name, action.system.slug) && needsNewInstanceofItem(targetActor, armorDetails.name)) {
+                        armorDetails.added = !0;
+                        const clonedData = JSON.parse(JSON.stringify(action));
+                        if (notBracersOfArmor(armorDetails.name)) {
+                            if (clonedData.system.quantity = armorDetails.qty, clonedData.system.category = armorDetails.prof, clonedData.system.potencyRune.value = armorDetails.pot, clonedData.system.resiliencyRune.value = armorDetails.res, armorDetails.worn ? clonedData.system.equipped.inSlot = !0 : clonedData.system.equipped.inSlot = !1, armorDetails.runes[0] && (clonedData.system.propertyRune1.value = camelCase(armorDetails.runes[0])), armorDetails.runes[1] && (clonedData.system.propertyRune2.value = camelCase(armorDetails.runes[1])), armorDetails.runes[2] && (clonedData.propertyRune3.value = camelCase(armorDetails.runes[2])), armorDetails.runes[3] && (clonedData.system.propertyRune4.value = camelCase(armorDetails.runes[3])), armorDetails.mat) {
+                                let material = armorDetails.mat.split(" (")[0];
+                                clonedData.system.preciousMaterial.value = camelCase(material), clonedData.system.preciousMaterialGrade.value = getMaterialGrade(armorDetails.mat)
+                            }
+                            armorDetails.display && (clonedData.name = armorDetails.display)
+                        }
+                        equip.push(clonedData)
+                    }
+                } if (addMoney)
+                if ("platinum-pieces" === action.system.slug) {
+                     const clonedData = JSON.parse(JSON.stringify(action));
+                    clonedData.system.quantity = jsonBuild.money.pp, equip.push(clonedData)
+                } else if ("gold-pieces" === action.system.slug) {
+                const clonedData = JSON.parse(JSON.stringify(action));
+                clonedData.system.quantity = jsonBuild.money.gp, equip.push(clonedData)
+            } else if ("silver-pieces" === action.system.slug) {
+                 const clonedData = JSON.parse(JSON.stringify(action));
+                clonedData.system.quantity = jsonBuild.money.sp, equip.push(clonedData)
+            } else if ("copper-pieces" === action.system.slug) {
+                const clonedData = JSON.parse(JSON.stringify(action));
+                clonedData.system.quantity = jsonBuild.money.cp, equip.push(clonedData)
+            }
+        }
+        finishedEquipment = !0, checkAllFinishedAndCreate(targetActor)
+    } else finishedEquipment = !0, checkAllFinishedAndCreate(targetActor);
+
+    var i = 0;
+    for (const item1 in equip)
+        {
+            if(i == equip.length) break; else i++; 
+           await targetActor.createEmbeddedDocuments("Item", [equip[item1]]); 
+        }
+
+    i = 0;
+
+    
+    addSpellcasters ? setSpellcasters(targetActor, jsonBuild.spellCasters) : (finishedSpells = !0, checkAllFinishedAndCreate(targetActor)), addLores(targetActor, arrayLores);     
+    
+    
+
+}
+
+function getProfsValue(value) {
+    switch (value) {
+        case "T":
+            return 1;
+        case "E":
+            return 2;
+        case "M":
+            return 3;
+        case "L":
+            return 4;
+    }
+    return 0
+}
+/////////////////////End
+
 async function beginPathbuilderImport(targetActor, isHV = !1) {
     finishedSpells = finishedEquipment = finishedAncestryFeatures = finishedClassFeatures = finishedActions = finishedFeats = applyChanges = !1, allItems = [];
     let heroVault = isHV ? '<input type="checkbox" id="checkBoxHVExport" name="checkBoxHVExport" ><label for="checkBoxHVExport"> Export this PC to my HeroVau.lt</label><br><br>' : "";
-    new Dialog({
-        title: "Pathbuilder Import",
+     new Dialog({
+        title: "Pathbuilder Импорт",
         content: `
       <div>
-        <p><strong>It is strongly advised to import to a blank PC and not overwrite an existing PC.</strong></p>
+        <p><strong>СТРОГО рекомендуется создавать отдельный лист и не перезаписывать лист существующего персонажа</strong></p>
         <hr>
-        <p>Step 1: Refresh this browser page!</p>
-        <p>Step 2: Export your character from Pathbuilder 2e via the app menu</p>
-        <p>Step 3: Enter the 6 digit user ID number from the pathbuilder export dialog below</p>
+        <p>Шаг 1: Экспортируйте своего персонажа из Pathbuilder 2e через меню приложения!</p>
+        <p>Шаг 2: Введите 6-значный идентификационный номер пользователя из диалогового окна экспорта pathbuilder ниже.</p>
+        <p>Шаг 3: Сделайте выборы для классовых и расовых особенностей в соответствии с тем, что находится на сайте</p>
         <br>
-        <p>Please note - items which cannot be matched to the Foundry database will not be imported!</p>
-        <p><strong>All inventory items will be removed upon import.</strong> The option to turn this off will return in the future. If you need to keep items, I recommend creating a new PC, importing via Pathbuilder to the new PC, then dragging inventory items from old PC to new PC.</p>
-      <div>
+        <div>
       <hr/>
       <form>
           <input type="checkbox" id="checkBoxFeats" name="checkBoxFeats" checked>
-          <label for="checkBoxFeats"> Import Feats and Specials?</label><br><br>
+          <label for="checkBoxFeats">Импортировать Черты?</label><br><br>
           <input type="checkbox" id="checkBoxEquipment" name="checkBoxEquipment" checked>
-          <label for="checkBoxEquipment"> Import Equipment?</label><br>
-          <input type="checkbox" id="checkBoxMoney" name="checkBoxMoney" checked>
-          <label for="checkBoxMoney"> Import Money?</label><br><br>
+          <label for="checkBoxEquipment"> Импортировать Снаряжение?</label><br>
+          <!--input type="checkbox" id="checkBoxMoney" name="checkBoxMoney" checked>
+          <label for="checkBoxMoney"> Импортировать деньги?</label><br><br-->
           <!--input type="checkbox" id="checkBoxDeleteAll" name="checkBoxDeleteAll" checked>
-          < label for="checkBoxDeleteAll"> Delete all existing items before import (including spells)?</label><br><br -->
+          < label for="checkBoxDeleteAll"> Удалить все существующие предметы (в том числе и заклинание) из листа перед импортом?</label><br><br -->
           <input type="checkbox" id="checkBoxSpells" name="checkBoxSpells" checked>
-          <label for="checkBoxSpells"> Import Spells? (Always deletes existing)</label><br><br>
+          <label for="checkBoxSpells"> Импортировать заклинание? (Всегда удаляет существующее)</label><br><br>
           ${heroVault}
       </form>
       <div id="divCode">
-        Enter your pathbuilder user ID number<br>
+        Введите шестизначный код с сайта Pathbuilder<br>
         <div id="divOuter">
           <div id="divInner">
             <input id="textBoxBuildID" type="number" maxlength="6" />
@@ -108,19 +438,20 @@ async function beginPathbuilderImport(targetActor, isHV = !1) {
         buttons: {
             yes: {
                 icon: "<i class='fas fa-check'></i>",
-                label: "Import",
+                label: "Импорт",
                 callback: () => applyChanges = !0
             },
             no: {
                 icon: "<i class='fas fa-times'></i>",
-                label: "Cancel"
+                label: "Отмена"
             }
         },
         default: "yes",
         close: html => {
-            applyChanges && (isNormalInteger(buildID = html.find('[id="textBoxBuildID"]')[0].value) ? (addFeats = html.find('[name="checkBoxFeats"]')[0].checked, addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked, addMoney = html.find('[name="checkBoxMoney"]')[0].checked, addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked, deleteAll = !0, isHV && (heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked), fbpiDebug && console.log("%cPathbuilder2e Import | %cGot heroVaultExport:" + heroVaultExport, pbcolor1, pbcolor4), fetchPathbuilderBuild(targetActor, buildID)) : ui.notifications.warn("Build ID must be a positive integer!"))
+            applyChanges && (isNormalInteger(buildID = html.find('[id="textBoxBuildID"]')[0].value) ? (addFeats = html.find('[name="checkBoxFeats"]')[0].checked, addEquipment = html.find('[name="checkBoxEquipment"]')[0].checked, addSpellcasters = html.find('[name="checkBoxSpells"]')[0].checked, deleteAll = !0, isHV && (heroVaultExport = html.find('[name="checkBoxHVExport"]')[0].checked), fbpiDebug && console.log("%cPathbuilder2e Import | %cGot heroVaultExport:" + heroVaultExport, pbcolor1, pbcolor4), fetchPathbuilderBuild(targetActor, buildID)) : ui.notifications.warn("Build ID must be a positive integer!"))
         }
     }).render(!0)
+
 }
 
 function isNormalInteger(str) {
@@ -164,6 +495,7 @@ function checkCharacterIsCorrect(targetActor, jsonBuild) {
 function shouldBeManuallyDeleted(i) {
     return ("feat" != i.system.type || "ancestryfeature" != i.system.featType.value) && ("spell" != i.system.type && "spellcastingEntry" != i.system.type)
 }
+
 async function importCharacter(targetActor, jsonBuild) {
     if (deleteAll) {
         fbpiDebug && console.log("%cPathbuilder2e Import | %cDeleting all items", pbcolor1, pbcolor4);
@@ -290,32 +622,19 @@ async function importCharacter(targetActor, jsonBuild) {
                 
             }
     }
-
-    if (targetActor.ancestry != jsonBuild.ancestry)
-        for (const item of await game.packs.get("pf2e.ancestries").getDocuments()) item.system.slug != getSlug(jsonBuild.ancestry) && item.system.slug != getSlugNoQuote(jsonBuild.ancestry) || allItems.push(item.data);
+ if (targetActor.ancestry != jsonBuild.ancestry)
+        for (const item of await game.packs.get("pf2e.ancestries").getDocuments()) item.system.slug != getSlug(jsonBuild.ancestry) && item.system.slug != getSlugNoQuote(jsonBuild.ancestry) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
     if (targetActor.heritage != jsonBuild.heritage)
-        for (const item of await game.packs.get("pf2e.heritages").getDocuments()) item.system.slug != getSlug(jsonBuild.heritage) && item.system.slug != getSlugNoQuote(jsonBuild.heritage) || allItems.push(item.data);
+        for (const item of await game.packs.get("pf2e.heritages").getDocuments()) item.system.slug != getSlug(jsonBuild.heritage) && item.system.slug != getSlugNoQuote(jsonBuild.heritage) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
      if (targetActor.background != jsonBuild.background)
-        for (const item of await game.packs.get("pf2e.backgrounds").getDocuments()) item.system.slug != getSlug(jsonBuild.background) && item.system.slug != getSlugNoQuote(jsonBuild.background) || allItems.push(item.data);
+        for (const item of await game.packs.get("pf2e.backgrounds").getDocuments()) item.system.slug != getSlug(jsonBuild.background) && item.system.slug != getSlugNoQuote(jsonBuild.background) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
+    
     var t = allItems.length - 1;
-    let content1 = await game.packs.get("pf2e.ancestryfeatures").getDocuments();
-    for (const item of await game.packs.get("pf2e.ancestryfeatures").getDocuments())         
-        for (const ancestryFeat in allItems[1].system.items) 
-        {
-             if (allItems[1].system.items[ancestryFeat].name == item.name || allItems[1].system.items[ancestryFeat].name == item.name) 
-             {
-                 {
-                    var newFeat = [item.name, null, "Ancestry Feature", 1];
-                     
-                    allItems.push(item.system);
-                    arrayFeats.push(newFeat)
-                 }
-             }
-        }
+
                
     LocationBack = allItems[t]._id;
     if (targetActor.deity != jsonBuild.deity)
-        for (const item of await game.packs.get("pf2e.deities").getDocuments()) item.system.slug != getSlug(jsonBuild.deity) && item.system.slug != getSlugNoQuote(jsonBuild.background) || allItems.push(item.data);
+        for (const item of await game.packs.get("pf2e.deities").getDocuments()) item.system.slug != getSlug(jsonBuild.deity) && item.system.slug != getSlugNoQuote(jsonBuild.background) || await targetActor.createEmbeddedDocuments("Item", [item.data]);
     //let blacklist = [jsonBuild.heritage, "Great Fortitude", "Divine Spellcasting", "Divine Ally (Blade)", "Divine Ally (Shield)", "Divine Ally (Steed)", "Divine Smite (Antipaladin)", "Divine Smite (Paladin)", "Divine Smite (Desecrator)", "Divine Smite (Liberator)", "Divine Smite (Redeemer)", "Divine Smite (Tyrant)", "Exalt (Antipaladin)", "Exalt (Paladin)", "Exalt (Desecrator)", "Exalt (Redeemer)", "Exalt (Liberator)", "Exalt (Tyrant)", "Intimidation", "Axe", "Sword", "Water", "Sword Cane", "Battle Axe", "Bane", "Air", "Occultism", "Performance", "Alchemy", "Nature", "Red", "Shark", "Green", "Divine", "Sun", "Fire", "Might", "Mace", "Bronze", "Spirit", "Zeal", "Battledancer", "Light Armor Expertise", "Religion", "Polearm", "Longsword", "Moon", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Hammer", "Athletics", "Deception", "Society", "Occultism", "Arcane", "Simple Weapon Expertise", "Defensive Robes", "Magical Fortitude", "Occult", "Acrobatics", "Medicine", "Diplomacy", "Might", "Reflex", "Evasion", "Vigilant Senses", "Iron Will", "Lightning Reflexes", "Alertness", "Shield Block", "Anathema", "Druidic Language", "Weapon Expertise", "Armor Expertise", "Armor Mastery", "Darkvision", "Stealth", "Divine", "Shield", "Survival", "Arcana", "Will", "Fortitude", "Signature Spells", "Low-Light Vision", "Powerful Fist", "Mystic Strikes", "Incredible Movement", "Claws", "Wild Empathy", "Aquatic Adaptation", "Resolve", "Expert Spellcaster", "Master Spellcaster", "Legendary Spellcaster", "Weapon Specialization", "Mighty Rage", "Deny Advantage", "Critical Brutality", "Juggernaut", "Medium Armor Expertise", "Weapon Specialization (Barbarian)", "Greater Weapon Specialization", "Diplomacy", "Improved Evasion", "Weapon Mastery", "Incredible Senses"];
        
     
@@ -324,7 +643,16 @@ async function importCharacter(targetActor, jsonBuild) {
     //Добавить Классовые Особенности
     let classfeat = await game.packs.get("pf2e.classfeatures").getDocuments();
     
-    arraySpecials = arraySpecials.filter(val => !blacklist.includes(val)), jsonBuild.specials = uniq(arraySpecials), addFeats ? (finishedClassFeatures = finishedAncestryFeatures = !0, await addFeatItems(targetActor, arrayFeats), await addFeatItems(targetActor, arraySpecials), await addActionItems(targetActor, arraySpecials), await addAncestryFeatureItems(targetActor, arraySpecials), await addClassFeatureItems(targetActor, arraySpecials, classFeatures)) : (finishedClassFeatures = finishedActions = finishedAncestryFeatures = finishedFeats = !0, checkAllFinishedAndCreate(targetActor)), blacklist = ["Bracers of Armor", "", "", "", "", ""];
+    arraySpecials = arraySpecials.filter(val => !blacklist.includes(val)), jsonBuild.specials = uniq(arraySpecials), addFeats ? (finishedClassFeatures = finishedAncestryFeatures = !0, await addFeatItems(targetActor, arrayFeats), await addFeatItems(targetActor, arraySpecials), await addActionItems(targetActor, arraySpecials), await addAncestryFeatureItems(targetActor, arraySpecials)) : (finishedClassFeatures = finishedActions = finishedAncestryFeatures = finishedFeats = !0, checkAllFinishedAndCreate(targetActor)), blacklist = ["Bracers of Armor", "", "", "", "", ""];
+    
+      
+    for (const item of await game.packs.get("pf2e.feats-srd").getDocuments()) 
+        for (const item1 in allItems) 
+            if (allItems[item1].type == "feat")
+                if(allItems[item1].system.featType.value == "skill" || allItems[item1].system.featType.value == "class" || allItems[item1].system.featType.value == "ancestry" || allItems[item1].system.featType.value == "general")
+            item.system.slug != allItems[item1].system.slug && item.system.slug != allItems[item1].system.slug || await targetActor.createEmbeddedDocuments("Item", [allItems[item1]]);
+    
+    var equip = []; 
     for (const cf in allItems) blacklist.push(allItems[cf].name);
     if (allItems = allItems.filter(function(a) {
             return !this[a._id] && (this[a._id] = !0)
@@ -344,21 +672,21 @@ async function importCharacter(targetActor, jsonBuild) {
                         var itemAmount = arrayEquipment[ref][1];
                         arrayEquipment[ref].added = !0;
                         const clonedData = JSON.parse(JSON.stringify(action));
-                        "kit" != clonedData.type && (clonedData.quantity = itemAmount, allItems.push(clonedData))
+                        "kit" != clonedData.type && (clonedData.quantity = itemAmount, equip.push(clonedData))
                     }
                 } for (var ref in arrayKit)
                 if (arrayKit.hasOwnProperty(ref))
                     if (arrayKit[ref][0] === action.system.slug && needsNewInstanceofItem(targetActor, itemName)) {
                         itemAmount = arrayKit[ref][1];
                         const clonedData = JSON.parse(JSON.stringify(action));
-                        clonedData.quantity = itemAmount, clonedData.containerId.value = backpackInstance.id, allItems.push(clonedData)
+                        clonedData.quantity = itemAmount, clonedData.containerId.value = backpackInstance.id, equip.push(clonedData)
                     } for (var ref in arrayWeapons)
                 if (arrayWeapons.hasOwnProperty(ref)) {
                     var material, weaponDetails = arrayWeapons[ref];
                     if (isNameMatch(weaponDetails.name, action.system.slug) && needsNewInstanceofItem(targetActor, weaponDetails.name)) {
                         weaponDetails.added = !0;
                         const clonedData = JSON.parse(JSON.stringify(action));
-                        clonedData.system.quantity = weaponDetails.qty, clonedData.system.damage.die = weaponDetails.die, clonedData.system.potencyRune.value = weaponDetails.pot, clonedData.system.strikingRune.value = weaponDetails.str, weaponDetails.runes[0] && (clonedData.system.propertyRune1.value = camelCase(weaponDetails.runes[0])), weaponDetails.runes[1] && (clonedData.system.propertyRune2.value = camelCase(weaponDetails.runes[1])), weaponDetails.runes[2] && (clonedData.system.propertyRune3.value = camelCase(weaponDetails.runes[2])), weaponDetails.runes[3] && (clonedData.system.propertyRune4.value = camelCase(weaponDetails.runes[3])), weaponDetails.mat && (material = weaponDetails.mat.split(" (")[0], clonedData.system.preciousMaterial.value = camelCase(material), clonedData.system.preciousMaterialGrade.value = getMaterialGrade(weaponDetails.mat)), weaponDetails.display && (clonedData.name = weaponDetails.display), allItems.push(clonedData)
+                        clonedData.system.quantity = weaponDetails.qty, clonedData.system.damage.die = weaponDetails.die, clonedData.system.potencyRune.value = weaponDetails.pot, clonedData.system.strikingRune.value = weaponDetails.str, weaponDetails.runes[0] && (clonedData.system.propertyRune1.value = camelCase(weaponDetails.runes[0])), weaponDetails.runes[1] && (clonedData.system.propertyRune2.value = camelCase(weaponDetails.runes[1])), weaponDetails.runes[2] && (clonedData.system.propertyRune3.value = camelCase(weaponDetails.runes[2])), weaponDetails.runes[3] && (clonedData.system.propertyRune4.value = camelCase(weaponDetails.runes[3])), weaponDetails.mat && (material = weaponDetails.mat.split(" (")[0], clonedData.system.preciousMaterial.value = camelCase(material), clonedData.system.preciousMaterialGrade.value = getMaterialGrade(weaponDetails.mat)), weaponDetails.display && (clonedData.name = weaponDetails.display), equip.push(clonedData)
                     }
                 } for (var ref in arrayArmor)
                 if (arrayArmor.hasOwnProperty(ref)) {
@@ -373,26 +701,39 @@ async function importCharacter(targetActor, jsonBuild) {
                             }
                             armorDetails.display && (clonedData.name = armorDetails.display)
                         }
-                        allItems.push(clonedData)
+                        equip.push(clonedData)
                     }
                 } if (addMoney)
                 if ("platinum-pieces" === action.system.slug) {
                      const clonedData = JSON.parse(JSON.stringify(action));
-                    clonedData.system.quantity = jsonBuild.money.pp, allItems.push(clonedData)
+                    clonedData.system.quantity = jsonBuild.money.pp, equip.push(clonedData)
                 } else if ("gold-pieces" === action.system.slug) {
                 const clonedData = JSON.parse(JSON.stringify(action));
-                clonedData.system.quantity = jsonBuild.money.gp, allItems.push(clonedData)
+                clonedData.system.quantity = jsonBuild.money.gp, equip.push(clonedData)
             } else if ("silver-pieces" === action.system.slug) {
                  const clonedData = JSON.parse(JSON.stringify(action));
-                clonedData.system.quantity = jsonBuild.money.sp, allItems.push(clonedData)
+                clonedData.system.quantity = jsonBuild.money.sp, equip.push(clonedData)
             } else if ("copper-pieces" === action.system.slug) {
                 const clonedData = JSON.parse(JSON.stringify(action));
-                clonedData.system.quantity = jsonBuild.money.cp, allItems.push(clonedData)
+                clonedData.system.quantity = jsonBuild.money.cp, equip.push(clonedData)
             }
         }
         finishedEquipment = !0, checkAllFinishedAndCreate(targetActor)
     } else finishedEquipment = !0, checkAllFinishedAndCreate(targetActor);
-    addSpellcasters ? setSpellcasters(targetActor, jsonBuild.spellCasters) : (finishedSpells = !0, checkAllFinishedAndCreate(targetActor)), addLores(targetActor, arrayLores)     
+
+    var i = 0;
+    for (const item1 in equip)
+        {
+            if(i == equip.length) break; else i++; 
+           await targetActor.createEmbeddedDocuments("Item", [equip[item1]]); 
+        }
+
+    i = 0;
+
+    
+    addSpellcasters ? setSpellcasters(targetActor, jsonBuild.spellCasters) : (finishedSpells = !0, checkAllFinishedAndCreate(targetActor)), addLores(targetActor, arrayLores);     
+    
+
 }
 
 
@@ -438,15 +779,18 @@ async function addFeatItems(targetActor, arrayFeats) {
                     itemExtra = pathbuilderFeatItem[1];
                 if (isNameMatch(itemName, action.data.data.slug) && needsNewInstanceofFeat(targetActor, itemName, itemExtra)) {
                     var location, displayName = itemName;
-                    addedItems.push(itemName), null != itemExtra && (displayName += " (" + itemExtra + ")");
+                    addedItems.push(action.name);
                     const clonedData = JSON.parse(JSON.stringify(action));
-                    clonedData.name = displayName;
+                    clonedData.name = action.name;
                     try {
                         pathbuilderFeatItem[2] && pathbuilderFeatItem[3] && (location = getFoundryFeatLocation(pathbuilderFeatItem[2], pathbuilderFeatItem[3]), usedLocations.includes(location) || (clonedData.system.location = location, usedLocations.push(location)))
                     } catch (err) {
                         console.log(err)
                     }
-                    if(pathbuilderFeatItem[2] == "Background Feat") clonedData.system.location = LocationBack;
+                    if(pathbuilderFeatItem[2] == "Background Feat") break;
+                    
+                    if (clonedData.type == "feat")
+                        if(!pathbuilderFeatItem[2]) break;
                     clonedData._id = makeid(16);
                     // if(action.data.system.featType.value == "skill")
                     //allItems[allItems.length - 1].feats.push(clonedData);
@@ -458,7 +802,7 @@ async function addFeatItems(targetActor, arrayFeats) {
                     // allItems[allItems.length - 1].feats.push(clonedData);
                 }
             } 
-    
+    /*
     content = await game.packs.get("pf2e.ancestryfeatures").getDocuments();
     
     for (const action of content.filter(item => featIsRequired(item, arrayFeats)))
@@ -474,7 +818,7 @@ async function addFeatItems(targetActor, arrayFeats) {
             }
             break
         } 
-    
+    */
     finishedFeats = !0, checkAllFinishedAndCreate(targetActor)
 }
 
@@ -662,158 +1006,8 @@ async function addClassFeatureItems(targetActor, arraySpecials, arrayCF) {
     for (var t in ArSp)  
     for(var ref in allItems)
         if(allItems[ref].type != "feat")
-        if(allItems[ref].system && allItems[ref].system.rules)
-        for (var rule in allItems[ref].system.rules)
-            {       
-                    if(allItems[ref].system.rules[rule].key == "ChoiceSet")
-                    {
-                        //Если не выбор божества у клирика
-                        // if(allItems[ref].system.rules[rule].choices == "system.details.deities.domains")
-                        // {
-                        //         allItems[ref].system.rules[rule].flag = "domainInitiate";
-                        //         allItems[ref].system.rules[rule].selection = "cities"
-                        // }
-                        // //system.details.deities.domains
-                        // else 
-                        if(allItems[ref].system.rules[rule].choices.itemType == "deity")
-                        {
-                            var ChoiceDeity = allItems.find(function(item) {
-                                return item.type == "deity"
-                            });
-                            allItems[ref].name = allItems[ref].name + " (" + jsonBuild.deity + ")";
-                            //allItems[ref].system.rules[rule].selection = ChoiceDeity.flags.core.sourceId;
-                            allItems[ref].system.rules.splice(rule, 1)
-                        }
-                        else if(allItems[ref].system.slug  == "cloistered-cleric")
-                        {
-                            if(Domain1)
-                            {
-                                Domain1.system.rules[rule].flag = "domainInitiate";
-                                Domain1.system.rules[rule].selection = "Air";
-                                //var k = {key : "GrantItem", uuid: Domain1.flags.core.sourceId};
-                                //allItems[ref].system.rules.push(k)
-                            }
-                        }
-                         else if(allItems[ref].system.rules[rule].choices == "weaponGroups")
-                        {
-                            var ChoiceClass = wp.find(function(item) {
-                                return item == ArSp[t]
-                            });
-                            if(allItems[ref].system.slug == "fighter-weapon-mastery" || allItems[ref].system.slug == "weapon-legend")
-                            if(ChoiceClass)
-                            {
-                                allItems[ref].name = allItems[ref].name + " (" + ChoiceClass + ")";
-                                allItems[ref].system.rules[1].definition[0] = "weapon:group:" + ChoiceClass.toLowerCase();
-                                allItems[ref].system.rules[1].label = "PF2E.SpecificRule.FighterWeaponMasteryLegend.SimpleMartial." + ChoiceClass.toLowerCase();
-                                allItems[ref].system.rules[2].label = "PF2E.SpecificRule.FighterWeaponMasteryLegend.Advanced." + ChoiceClass.toLowerCase();
-                                allItems[ref].system.rules[2].definition[1] = "weapon:group:" + ChoiceClass.toLowerCase();
-                                ArSp[t] = "";
-                                allItems[ref].system.rules.splice(0, 1);
-                            }
 
-                        }
-                        // else if(allItems[ref].system.slug == "muses")
-                        // {
-                        //     var ChoiceClass =  allItems[ref].system.rules[rule].choices.find(function(item) {
-                        //         return item == ArSp[t]
-                        //     });
-                        //     if(ChoiceClass)
-                        //     {
-                        //         allItems[ref].name = allItems[ref].name + " (" + ChoiceClass + ")";
-                        //         allItems[ref].system.rules[1].uuid = ArSp[t];
-                        //         ArSp[t] = "";
-                        //         allItems[ref].system.rules.splice(0, 1);
-                        //     }
-
-                        // }
-                        else if(allItems[ref].system.slug == "second-path-to-perfection" || allItems[ref].system.slug == "path-to-perfection" || allItems[ref].system.slug == "third-path-to-perfection")
-                        {
-                            if(allItems[ref].system.slug == "second-path-to-perfection") var n = 2;
-                            if(allItems[ref].system.slug == "path-to-perfection") var n = 1;
-                            if(allItems[ref].system.slug == "third-path-to-perfection") var n = 1;
-                            var Save;
-                            for(var ref1 in arraySpecials)
-                            {
-                                if(arraySpecials[ref1] == "Reflex" || arraySpecials[ref1] == "Will" || arraySpecials[ref1] == "Fortitude")  
-                                    if(n != PathN)
-                                    {
-                                        PathN = PathN + 1;
-                                        continue
-                                    }
-                                    else
-                                    {
-                                        PathN = 1;
-                                        Save = arraySpecials[ref1].toLowerCase();
-                                        break;
-                                    }
-                            }
-                            
-                            var ChoiceClass = allItems[ref].system.rules[rule].choices.find(function(item) {
-                                return item.value == Save
-                            });
-                            if(ChoiceClass)
-                            {
-                                allItems[ref].system.rules[0].selection = Save;
-                                allItems[ref].name = allItems[ref].name + " (" + Save + ")";
-                                allItems[ref].system.rules[1].path = "system.saves." + Save + ".rank";
-                                allItems[ref].system.rules[2].selector = Save;
-                                allItems[ref].system.rules[3].selector = Save;
-                               //allItems[ref].system.rules[4].option = "self:path-to-perfection:"  + Save;
-                                allItems[ref].system.rules.splice(0, 1);
-                            }
-                                
-                           
-                        }   
-                        else if(allItems[ref].system.slug == "doctrine" || allItems[ref].system.slug == "first-doctrine" || allItems[ref].system.slug == "second-doctrine" || allItems[ref].system.slug == "third-doctrine" || allItems[ref].system.slug == "fourth-doctrine" || allItems[ref].system.slug == "fifth-doctrine")
-                        {
-                            var ChoiceClass = allItems[ref].system.rules[rule].choices.find(function(item) {
-                                return item.value == ArSp[t]
-                            });
-                            if(ChoiceClass)
-                                allItems[ref].system.rules[rule].selection = ChoiceClass.value;  
-                        }
-                        else  if(allItems[ref].system.slug == "deitys-domain")
-                        {
-                            continue;
-                            var ChoiceClass = allItems[ref].system.rules[rule].choices.find(function(item) {
-                                return item.value == ArSp[t]
-                            });
-                            if(ChoiceClass)
-                                allItems[ref].system.rules[rule].selection = ChoiceClass.value;  
-                        }
-                        else  if(allItems[ref].system.slug == "domain-initiate")
-                        {
-                            allItems[ref].system.rules.splice(0, 1);
-                            continue;
-                            var ChoiceClass = allItems[ref].system.rules[rule].choices.find(function(item) {
-                                return item.value == ArSp[t]
-                            });
-                            if(ChoiceClass)
-                                allItems[ref].system.rules[rule].selection = ChoiceClass.value;  
-                        }
-                        else  if(allItems[ref].system.slug == "rogues-racket")
-                        {
-                            
-                            var ChoiceClass = allItems[ref].system.rules[rule].choices.find(function(item) {
-                                return item.value == ArSp[t]
-                            });
-                            if(ChoiceClass)
-                                allItems[ref].system.rules[rule].selection = ChoiceClass.value;  
-                            //allItems[ref].system.rules.splice(0, 1);
-                        }
-                            
-                        else  
-                        {
-                            var ChoiceClass = allItems[ref].system.rules[rule].choices.find(function(item) {
-                                return item.value == ArSp[t]
-                            });
-                            if(ChoiceClass)
-                                allItems[ref].system.rules[rule].selection = ChoiceClass.value;  
-                        }
-                            
-                        
-                    }
-            }
+            
     finishedClassFeatures = !0, checkAllFinishedAndCreate(targetActor)
 }
 
@@ -908,6 +1102,8 @@ function getSizeValue(size) {
 //Заклинания - импорт (пока что только в подготовленные)
 async function setSpellcasters(targetActor, arraySpellcasters) {
     fbpiDebug && console.log("%cPathbuilder2e Import | %cDeleting all spells", pbcolor1, pbcolor4);
+    
+    
     let items = targetActor.data.items.filter(i => "spell" === i.type);
     var spellListObject, deletions = items.map(i => i.id);
     var count = 0;
@@ -935,7 +1131,10 @@ async function setSpellcasters(targetActor, arraySpellcasters) {
                             // if(spellCaster.instance[0].system.slots.slotsN.prepared)
                             //    spellCaster.instance[0].system.slots.slotsN.prepared.push(Spell) 
                             // clonedData.instance[0].system.slots.slotsN.push(spellCaster);
-                            allItems.push(clonedData);
+                            
+                            
+                            
+                            allSpells.push(clonedData);
                             
                             break
                         }
@@ -1075,7 +1274,14 @@ function needsNewInstanceOfLore(targetActor, loreName) {
 
 function checkAllFinishedAndCreate(targetActor) {
     var item, heroJSON;
-    if (finishedFeats && finishedEquipment && finishedSpells && finishedActions && finishedAncestryFeatures && finishedClassFeatures && targetActor.createEmbeddedDocuments("Item", allItems)) {
+    var i = 0;
+        for (const item1 in allSpells)
+        {
+            if(i == allSpells.length) break; else i++; 
+               targetActor.createEmbeddedDocuments("Item", [allSpells[item1]]); 
+        }
+
+    if (finishedFeats && finishedEquipment && finishedSpells && finishedActions && finishedAncestryFeatures && finishedClassFeatures) {
         let notAddedCount = 0,
             warningList = "",
            warning = "<p>The following items could not be added. They may have already have been added in a previous import or cannot be matched to a foundry item. You may be able to find them with a manual search.</p><ul>";
@@ -1543,6 +1749,7 @@ function findSpecialThings(specialArr, featsArray, specialClassFeatures) {
 function uniq(a) {
     return Array.from(new Set(a))
 }
+
 Hooks.on("herovaultfoundryReady", api => {
     fbpiDebug && console.log("%cPathbuilder2e Import | %cDisabling pathbuilder button since herovault is loaded", pbcolor1, pbcolor4), pbButton = !1
 }), Hooks.on("renderActorSheet", async function(obj, html) {
@@ -1550,14 +1757,18 @@ Hooks.on("herovaultfoundryReady", api => {
     if ("character" === actor.type && 0 != actor.canUserModify(game.user, "update") && pbButton) {
         let element = html.find(".window-header .window-title");
         if (1 == element.length) {
-            let button = $('<a class="popout" style><i class="fas fa-book"></i>Import from Pathbuilder 2e</a>');
+            let button = $('<a class="popout" style><i class="fas fa-book"></i>Pathbuilder2e</a>');
             button.on("click", () => beginPathbuilderImport(obj.object)), element.after(button)
-        }
+        }     
+        /*if (1 == element.length) {
+            let button = $('<a class="popout" style><i class="fas fa-book"></i>WanderersGuide</a>');
+            button.on("click", () => beginWanderersImport(obj.object)), element.after(button)
+        }*/
     }
 }), Hooks.on("init", () => {
-    game.modules.get("pathbuilder2e-import").api = {
+    game.modules.get("pathbuilder2e-import-new").api = {
         beginPathbuilderImport: beginPathbuilderImport
-    }, Hooks.callAll("pathbuilder2eimportReady", game.modules.get("pathbuilder2e-import").api)
+    }, Hooks.callAll("pathbuilder2eimportReady", game.modules.get("pathbuilder2e-import-new").api)
 }), 
     Hooks.on("ready", function() {
 //     console.log("%cPathbuilder2e Import | %cinitializing", pbcolor1, pbcolor4), game.settings.register("pathbuilder2e-import", "reportMissedItems", {
@@ -1569,7 +1780,7 @@ Hooks.on("herovaultfoundryReady", api => {
 //         default: !0,
 //         onChange: value => reportMissedItems = value
 //     }), 
-    game.settings.register("pathbuilder2e-import", "debugEnabled", {
+    /*game.settings.register("pathbuilder2e-import", "debugEnabled", {
         name: "Enable debug mode",
         hint: "Debug output will be written to the js console.",
         scope: "client",
@@ -1578,7 +1789,9 @@ Hooks.on("herovaultfoundryReady", api => {
         default: !1,
         onChange: value => fbpiDebug = value
     }), reportMissedItems = game.settings.get("pathbuilder2e-import", "reportMissedItems"), fbpiDebug = game.settings.get("pathbuilder2e-import", "debugEnabled")
+*/
 });
+
 export {
     beginPathbuilderImport
 };
