@@ -22,7 +22,7 @@ WARNING! ! ! I highly, highly recommend creating a new character sheet (or ask t
 
 ### For Localization
 
-In future Interface will be translated on ru and other language.
+In future Interface will be translated on other language.
 
 ### Future Idea
 
