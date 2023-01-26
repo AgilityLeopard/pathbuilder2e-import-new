@@ -20,6 +20,8 @@ WARNING! ! ! I highly, highly recommend creating a new character sheet (or ask t
 
 - 4) Enter the 6 digit reference number you got from Pathbuilder and click import.
 
+- 5) Make choices for your class, ancestry, and feat
+
 ### For Localization
 
 In future Interface will be translated on other language.
